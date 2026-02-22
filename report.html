@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard – BASNOM HIPMI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="js/config.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+        * { box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #0a0a0a; color: #e5e7eb; }
+
+        .gold-gradient { background: linear-gradient(90deg, #BF953F, #FCF6BA, #B38728, #FBF5B7, #AA771C); }
+        .gold-text {
+            background: linear-gradient(135deg, #BF953F 0%, #FCF6BA 40%, #B38728 60%, #AA771C 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+
+        .card { background: linear-gradient(145deg, #111, #191919); border: 1px solid rgba(191,149,63,0.18); border-radius: 1rem; }
+        .card-sm { background: #101010; border: 1px solid rgba(191,149,63,0.15); border-radius: 0.75rem; }
+
+        /* Login area */
+        #loginArea { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+
+        .input-field { background: #0d0d0d; border: 1px solid #2a2a2a; color: white; transition: border-color 0.2s, box-shadow 0.2s; }
+        .input-field:focus { border-color: #B38728; box-shadow: 0 0 0 2px rgba(179,135,40,0.15); outline: none; }
+
+        .btn-gold {
+            background: linear-gradient(90deg, #BF953F, #FCF6BA, #B38728);
+            background-size: 200% auto; color: #000; font-weight: 700;
+            transition: background-position 0.4s, transform 0.15s, box-shadow 0.2s;
+            box-shadow: 0 4px 20px rgba(179,135,40,0.3);
+        }
+        .btn-gold:hover { background-position: right center; transform: translateY(-1px); }
+        .btn-gold:active { transform: translateY(0); }
+
+        /* Table */
+        #reportArea { display: none; min-height: 100vh; padding: 2rem 1rem; }
+        .tbl-wrap { overflow-x: auto; border-radius: 0.75rem; border: 1px solid rgba(191,149,63,0.15); }
+        table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+        thead tr { background: rgba(191,149,63,0.08); }
+        th { padding: 0.75rem 1rem; text-align: left; font-size: 0.7rem; letter-spacing: 0.05em; text-transform: uppercase; color: #B38728; white-space: nowrap; border-bottom: 1px solid rgba(191,149,63,0.15); cursor: pointer; user-select: none; }
+        th:hover { background: rgba(191,149,63,0.06); }
+        th.sort-asc::after { content: ' ↑'; color: #FCF6BA; }
+        th.sort-desc::after { content: ' ↓'; color: #FCF6BA; }
+        td { padding: 0.7rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: top; word-break: break-word; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: rgba(191,149,63,0.04); }
+
+        .badge-hadir    { background: rgba(34,197,94,0.15); color: #4ade80; border: 1px solid rgba(34,197,94,0.3); border-radius: 9999px; padding: 2px 10px; font-size: 0.7rem; font-weight: 600; white-space: nowrap; }
+        .badge-tidak    { background: rgba(239,68,68,0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.3); border-radius: 9999px; padding: 2px 10px; font-size: 0.7rem; font-weight: 600; white-space: nowrap; }
+
+        .btn-del { color: #ef444480; transition: color 0.2s; background: none; border: none; cursor: pointer; padding: 2px 6px; border-radius: 4px; }
+        .btn-del:hover { color: #ef4444; background: rgba(239,68,68,0.1); }
+
+        /* Stat cards */
+        .stat-card { border-radius: 0.75rem; padding: 1.25rem; border: 1px solid rgba(191,149,63,0.15); background: #101010; }
+
+        /* Search/filter bar */
+        .search-bar { background: #0d0d0d; border: 1px solid #2a2a2a; color: white; border-radius: 0.5rem; padding: 0.5rem 1rem; width: 100%; font-size: 0.85rem; }
+        .search-bar:focus { border-color: #B38728; outline: none; }
+
+        select.filter-sel { background: #0d0d0d; border: 1px solid #2a2a2a; color: white; border-radius: 0.5rem; padding: 0.5rem 0.75rem; font-size: 0.85rem; }
+        select.filter-sel:focus { border-color: #B38728; outline: none; }
+
+        /* Spinner */
+        .spinner { border: 2px solid rgba(255,255,255,0.1); border-top-color: #B38728; border-radius: 50%; width: 24px; height: 24px; animation: spin 0.7s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* PIN dots */
+        .pin-char { width: 14px; height: 14px; border-radius: 50%; background: #2a2a2a; transition: background 0.15s; }
+        .pin-char.filled { background: #B38728; }
+
+        /* Fade */
+        .fade-in { animation: fadeIn 0.5s ease both; }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
+
+        /* Confirm modal */
+        #confirmModal { position:fixed; inset:0; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:9999; opacity:0; pointer-events:none; transition:opacity 0.25s; padding:1rem; }
+        #confirmModal.show { opacity:1; pointer-events:all; }
+
+        /* Toast */
+        #toast { position:fixed; bottom:1.5rem; left:50%; transform:translateX(-50%) translateY(120%); transition:transform 0.4s cubic-bezier(0.34,1.56,0.64,1); z-index:99999; min-width:280px; max-width:90vw; border-radius:0.75rem; padding:0.85rem 1.1rem; }
+        #toast.show { transform:translateX(-50%) translateY(0); }
+
+        /* Empty state */
+        #emptyState { display:none; }
+
+        @media (max-width:640px) { th, td { padding: 0.5rem 0.6rem; } }
+    </style>
+</head>
+<body>
+
+<!-- ==================== LOGIN AREA ==================== -->
+<div id="loginArea">
+    <div class="card max-w-sm w-full overflow-hidden fade-in">
+        <div class="gold-gradient h-1 w-full"></div>
+        <div class="p-8 space-y-6">
+            <div class="text-center">
+                <h1 class="text-2xl font-bold gold-text" style="font-family:'Cinzel',serif;">Admin Dashboard</h1>
+                <p class="text-xs text-gray-500 mt-1 tracking-widest uppercase">BASNOM HIPMI OTOMOTIF JABAR</p>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs font-semibold uppercase text-yellow-600 tracking-wide block mb-2">Masukkan PIN Admin</label>
+                    <!-- PIN dots visualizer -->
+                    <div class="flex gap-2 justify-center mb-3" id="pinDots">
+                        <div class="pin-char" id="dot0"></div><div class="pin-char" id="dot1"></div>
+                        <div class="pin-char" id="dot2"></div><div class="pin-char" id="dot3"></div>
+                        <div class="pin-char" id="dot4"></div><div class="pin-char" id="dot5"></div>
+                        <div class="pin-char" id="dot6"></div><div class="pin-char" id="dot7"></div>
+                    </div>
+                    <input type="password" id="pinInput"
+                        class="input-field w-full p-3 rounded-lg text-center text-lg tracking-widest"
+                        placeholder="••••••••" maxlength="8" autocomplete="off">
+                </div>
+                <button onclick="checkPin()" class="btn-gold w-full py-3 rounded-lg text-sm uppercase tracking-widest">
+                    Masuk
+                </button>
+                <p id="pinErr" class="text-red-400 text-xs text-center hidden">PIN salah. Coba lagi.</p>
+            </div>
+        </div>
+        <div class="gold-gradient h-0.5 w-full opacity-30"></div>
+    </div>
+</div>
+
+<!-- ==================== REPORT AREA ==================== -->
+<div id="reportArea">
+
+    <!-- Top bar -->
+    <div class="max-w-7xl mx-auto">
+
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div>
+                <h1 class="text-2xl font-bold gold-text" style="font-family:'Cinzel',serif;">Laporan Kehadiran</h1>
+                <p class="text-xs text-gray-500 mt-0.5">Ceremonial, Talkshow & Buka Bersama · 7 Maret 2026</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="loadData()" id="refreshBtn" class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm border border-yellow-600/30 text-yellow-600 hover:bg-yellow-600/10 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    Refresh
+                </button>
+                <button onclick="exportExcel()" class="btn-gold flex items-center gap-2 px-4 py-2 rounded-lg text-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+                    Export Excel
+                </button>
+                <button onclick="logout()" title="Keluar" class="px-3 py-2 rounded-lg text-sm border border-red-900/40 text-red-500 hover:bg-red-900/20 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Stat Cards -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            <div class="stat-card">
+                <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Total RSVP</p>
+                <p class="text-3xl font-bold gold-text" id="statTotal">—</p>
+            </div>
+            <div class="stat-card">
+                <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Konfirmasi Hadir</p>
+                <p class="text-3xl font-bold text-green-400" id="statHadir">—</p>
+            </div>
+            <div class="stat-card">
+                <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Tidak Hadir</p>
+                <p class="text-3xl font-bold text-red-400" id="statTidak">—</p>
+            </div>
+            <div class="stat-card">
+                <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Tingkat Hadir</p>
+                <p class="text-3xl font-bold text-yellow-400" id="statPct">—</p>
+            </div>
+        </div>
+
+        <!-- Filter & Search bar -->
+        <div class="flex flex-col sm:flex-row gap-3 mb-4">
+            <input type="text" id="searchInput" class="search-bar flex-1" placeholder="🔍  Cari nama, komunitas, atau nomor WA..." oninput="renderTable()">
+            <select id="filterStatus" class="filter-sel" onchange="renderTable()">
+                <option value="">Semua Status</option>
+                <option value="Hadir">✅ Hadir</option>
+                <option value="Tidak Hadir">❌ Tidak Hadir</option>
+            </select>
+            <select id="filterKomunitas" class="filter-sel" onchange="renderTable()">
+                <option value="">Semua Komunitas</option>
+            </select>
+        </div>
+
+        <!-- Table -->
+        <div class="card overflow-hidden">
+            <!-- Loading -->
+            <div id="loadingState" class="flex items-center justify-center py-20 gap-3">
+                <div class="spinner"></div>
+                <span class="text-gray-500 text-sm">Memuat data...</span>
+            </div>
+
+            <!-- Empty -->
+            <div id="emptyState" class="text-center py-20 text-gray-600">
+                <svg class="w-12 h-12 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                </svg>
+                <p>Belum ada data.</p>
+            </div>
+
+            <div class="tbl-wrap" id="tableWrap" style="display:none;">
+                <table id="attendanceTable">
+                    <thead>
+                        <tr>
+                            <th style="width:40px">#</th>
+                            <th onclick="sortBy('nama')">Nama</th>
+                            <th onclick="sortBy('komunitas')">Komunitas</th>
+                            <th onclick="sortBy('whatsapp')">WhatsApp</th>
+                            <th onclick="sortBy('status')">Status</th>
+                            <th>Alasan / Pesan</th>
+                            <th onclick="sortBy('created_at')">Waktu Daftar</th>
+                            <th style="width:40px"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+
+            <!-- Pagination info -->
+            <div id="paginationInfo" class="text-xs text-gray-600 p-3 border-t border-white/5 text-right" style="display:none;"></div>
+        </div>
+
+        <p class="text-xs text-gray-700 text-center mt-4">&copy; 2026 &nbsp;BPD HIPMI OTOMOTIF JAWA BARAT – Dashboard Internal</p>
+    </div>
+</div>
+
+<!-- ==================== CONFIRM DELETE MODAL ==================== -->
+<div id="confirmModal">
+    <div class="card max-w-sm w-full overflow-hidden">
+        <div class="p-6 space-y-4 text-center">
+            <div class="w-12 h-12 rounded-full flex items-center justify-center mx-auto" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);">
+                <svg class="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </div>
+            <h3 class="font-semibold text-lg">Hapus Data Ini?</h3>
+            <p class="text-sm text-gray-400" id="confirmMsg">Data peserta akan dihapus secara permanen.</p>
+            <div class="flex gap-3 mt-4">
+                <button onclick="closeConfirm()" class="flex-1 py-2 rounded-lg border border-white/10 text-gray-400 text-sm hover:bg-white/5 transition">Batal</button>
+                <button onclick="confirmDelete()" class="flex-1 py-2 rounded-lg bg-red-700 text-white text-sm font-semibold hover:bg-red-600 transition">Hapus</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div id="toast">
+    <div class="flex items-start gap-3">
+        <span id="toastIcon"></span>
+        <div>
+            <p id="toastTitle" class="font-semibold text-sm"></p>
+            <p id="toastMsg" class="text-xs mt-0.5 opacity-80"></p>
+        </div>
+    </div>
+</div>
+
+<script>
+// ================================================================
+//  STATE
+// ================================================================
+let allData = [];
+let sortCol = 'id';
+let sortDir = 'desc';
+let pendingDeleteId = null;
+
+// ================================================================
+//  AUTH
+// ================================================================
+function checkPin() {
+    const pin = document.getElementById('pinInput').value;
+    document.getElementById('pinErr').classList.add('hidden');
+    if (pin === CONFIG.ADMIN_PIN) {
+        document.getElementById('loginArea').style.display = 'none';
+        document.getElementById('reportArea').style.display = 'block';
+        loadData();
+    } else {
+        document.getElementById('pinErr').classList.remove('hidden');
+        document.getElementById('pinInput').value = '';
+        updatePinDots('');
+    }
+}
+
+function logout() {
+    document.getElementById('loginArea').style.display = 'flex';
+    document.getElementById('reportArea').style.display = 'none';
+    document.getElementById('pinInput').value = '';
+    updatePinDots('');
+}
+
+document.getElementById('pinInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') checkPin(); });
+document.getElementById('pinInput').addEventListener('input', (e) => updatePinDots(e.target.value));
+
+function updatePinDots(val) {
+    for (let i = 0; i < 8; i++) {
+        document.getElementById('dot' + i)?.classList.toggle('filled', i < val.length);
+    }
+}
+
+// ================================================================
+//  LOAD DATA
+// ================================================================
+async function loadData() {
+    document.getElementById('loadingState').style.display = 'flex';
+    document.getElementById('tableWrap').style.display = 'none';
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('paginationInfo').style.display = 'none';
+
+    try {
+        const res = await CONFIG.tursoFetch([{
+            type: "execute",
+            stmt: { sql: "SELECT id, nama, komunitas, whatsapp, status, alasan, created_at FROM attendance ORDER BY id DESC" }
+        }]);
+
+        const result = res.results?.[0]?.response?.result;
+        const cols   = result?.cols?.map(c => c.name) ?? [];
+        const rows   = result?.rows ?? [];
+
+        allData = rows.map(row => {
+            const obj = {};
+            cols.forEach((col, i) => { obj[col] = row[i]?.value ?? ''; });
+            return obj;
+        });
+
+        buildKomunitasFilter();
+        updateStats();
+        renderTable();
+
+    } catch (err) {
+        console.error(err);
+        showToast('Error', 'Gagal mengambil data dari server.', 'error');
+    } finally {
+        document.getElementById('loadingState').style.display = 'none';
+    }
+}
+
+// ================================================================
+//  STATS
+// ================================================================
+function updateStats() {
+    const total  = allData.length;
+    const hadir  = allData.filter(r => r.status === 'Hadir').length;
+    const tidak  = total - hadir;
+    const pct    = total > 0 ? Math.round((hadir / total) * 100) : 0;
+    document.getElementById('statTotal').textContent = total;
+    document.getElementById('statHadir').textContent = hadir;
+    document.getElementById('statTidak').textContent = tidak;
+    document.getElementById('statPct').textContent   = pct + '%';
+}
+
+// ================================================================
+//  FILTER KOMUNITAS
+// ================================================================
+function buildKomunitasFilter() {
+    const sel   = document.getElementById('filterKomunitas');
+    const prev  = sel.value;
+    const unique = [...new Set(allData.map(r => r.komunitas).filter(Boolean))].sort();
+    sel.innerHTML = '<option value="">Semua Komunitas</option>' +
+        unique.map(k => `<option value="${escHtml(k)}">${escHtml(k)}</option>`).join('');
+    sel.value = prev;
+}
+
+// ================================================================
+//  SORT
+// ================================================================
+function sortBy(col) {
+    if (sortCol === col) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+    else { sortCol = col; sortDir = 'asc'; }
+    // update header classes
+    document.querySelectorAll('th').forEach(th => th.classList.remove('sort-asc','sort-desc'));
+    const thEls = document.querySelectorAll('th');
+    // find the matching th by onclick
+    thEls.forEach(th => {
+        if (th.getAttribute('onclick') === `sortBy('${col}')`) {
+            th.classList.add(sortDir === 'asc' ? 'sort-asc' : 'sort-desc');
+        }
+    });
+    renderTable();
+}
+
+// ================================================================
+//  RENDER TABLE
+// ================================================================
+function renderTable() {
+    const search   = document.getElementById('searchInput').value.toLowerCase();
+    const filterSt = document.getElementById('filterStatus').value;
+    const filterKm = document.getElementById('filterKomunitas').value;
+
+    let filtered = allData.filter(r => {
+        const matchSearch = !search ||
+            r.nama?.toLowerCase().includes(search) ||
+            r.komunitas?.toLowerCase().includes(search) ||
+            r.whatsapp?.includes(search);
+        const matchSt = !filterSt || r.status === filterSt;
+        const matchKm = !filterKm || r.komunitas === filterKm;
+        return matchSearch && matchSt && matchKm;
+    });
+
+    // Sort
+    filtered.sort((a, b) => {
+        const va = (a[sortCol] ?? '').toString().toLowerCase();
+        const vb = (b[sortCol] ?? '').toString().toLowerCase();
+        if (va < vb) return sortDir === 'asc' ? -1 : 1;
+        if (va > vb) return sortDir === 'asc' ? 1 : -1;
+        return 0;
+    });
+
+    const body = document.getElementById('tableBody');
+
+    if (filtered.length === 0) {
+        body.innerHTML = '';
+        document.getElementById('tableWrap').style.display = 'none';
+        document.getElementById('emptyState').style.display = 'block';
+        document.getElementById('paginationInfo').style.display = 'none';
+        return;
+    }
+
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('tableWrap').style.display = 'block';
+
+    body.innerHTML = filtered.map((r, i) => {
+        const badge = r.status === 'Hadir'
+            ? `<span class="badge-hadir">✅ Hadir</span>`
+            : `<span class="badge-tidak">❌ Tidak Hadir</span>`;
+        const ts = r.created_at ? formatDate(r.created_at) : '—';
+        return `<tr>
+            <td class="text-gray-600 text-xs">${i + 1}</td>
+            <td class="font-medium text-white">${escHtml(r.nama)}</td>
+            <td class="text-gray-300">${escHtml(r.komunitas)}</td>
+            <td>
+                <a href="https://wa.me/${r.whatsapp}" target="_blank"
+                   class="text-yellow-600 hover:text-yellow-400 transition text-xs">
+                    ${escHtml(r.whatsapp)}
+                </a>
+            </td>
+            <td>${badge}</td>
+            <td class="text-gray-400 text-xs" style="max-width:160px;">${escHtml(r.alasan) || '—'}</td>
+            <td class="text-gray-500 text-xs whitespace-nowrap">${ts}</td>
+            <td>
+                <button class="btn-del" onclick="requestDelete(${r.id}, '${escHtml(r.nama)}')" title="Hapus">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                </button>
+            </td>
+        </tr>`;
+    }).join('');
+
+    document.getElementById('paginationInfo').textContent =
+        `Menampilkan ${filtered.length} dari ${allData.length} data`;
+    document.getElementById('paginationInfo').style.display = 'block';
+}
+
+// ================================================================
+//  DELETE
+// ================================================================
+function requestDelete(id, nama) {
+    pendingDeleteId = id;
+    document.getElementById('confirmMsg').textContent = `Data "${nama}" akan dihapus secara permanen.`;
+    document.getElementById('confirmModal').classList.add('show');
+}
+
+function closeConfirm() {
+    pendingDeleteId = null;
+    document.getElementById('confirmModal').classList.remove('show');
+}
+
+async function confirmDelete() {
+    if (!pendingDeleteId) return;
+    closeConfirm();
+    try {
+        await CONFIG.tursoFetch([{
+            type: "execute",
+            stmt: { sql: "DELETE FROM attendance WHERE id = ?", args: [{ type:"integer", value: pendingDeleteId }] }
+        }]);
+        allData = allData.filter(r => r.id !== pendingDeleteId);
+        updateStats();
+        buildKomunitasFilter();
+        renderTable();
+        showToast('Berhasil', 'Data peserta telah dihapus.', 'success');
+    } catch {
+        showToast('Error', 'Gagal menghapus data.', 'error');
+    }
+}
+
+// Close modal on backdrop click
+document.getElementById('confirmModal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('confirmModal')) closeConfirm();
+});
+
+// ================================================================
+//  EXPORT EXCEL
+// ================================================================
+function exportExcel() {
+    const search   = document.getElementById('searchInput').value.toLowerCase();
+    const filterSt = document.getElementById('filterStatus').value;
+    const filterKm = document.getElementById('filterKomunitas').value;
+
+    let data = allData.filter(r => {
+        const matchSearch = !search || r.nama?.toLowerCase().includes(search) || r.komunitas?.toLowerCase().includes(search) || r.whatsapp?.includes(search);
+        const matchSt = !filterSt || r.status === filterSt;
+        const matchKm = !filterKm || r.komunitas === filterKm;
+        return matchSearch && matchSt && matchKm;
+    });
+
+    if (data.length === 0) {
+        showToast('Tidak ada data', 'Tidak ada data untuk diekspor.', 'warning');
+        return;
+    }
+
+    const header = ['No.', 'Nama Lengkap', 'Komunitas / Instansi', 'Nomor WhatsApp', 'Status Kehadiran', 'Alasan / Pesan', 'Waktu Daftar'];
+    const rows   = data.map((r, i) => [
+        i + 1,
+        r.nama,
+        r.komunitas,
+        r.whatsapp,
+        r.status,
+        r.alasan || '',
+        r.created_at || ''
+    ]);
+
+    const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+    // Column widths
+    ws['!cols'] = [{ wch: 5 }, { wch: 28 }, { wch: 28 }, { wch: 18 }, { wch: 16 }, { wch: 35 }, { wch: 22 }];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Daftar Hadir');
+
+    // Summary sheet
+    const sum = [
+        ['Laporan Kehadiran – BASNOM HIPMI OTOMOTIF JAWA BARAT'],
+        [],
+        ['Total RSVP',      allData.length],
+        ['Konfirmasi Hadir', allData.filter(r => r.status === 'Hadir').length],
+        ['Tidak Hadir',      allData.filter(r => r.status !== 'Hadir').length],
+        ['Diekspor pada',    new Date().toLocaleString('id-ID')]
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sum), 'Ringkasan');
+
+    const today = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `Daftar_Hadir_HIPMI_Otomotif_${today}.xlsx`);
+    showToast('Berhasil', `${data.length} data diekspor ke Excel.`, 'success');
+}
+
+// ================================================================
+//  HELPERS
+// ================================================================
+function formatDate(str) {
+    if (!str) return '—';
+    try {
+        const d = new Date(str);
+        return d.toLocaleString('id-ID', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    } catch { return str; }
+}
+
+function escHtml(str) {
+    return String(str ?? '')
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function showToast(title, msg, type = 'error') {
+    const t = document.getElementById('toast');
+    const colors = {
+        error:   { bg:'#2d1a1a', border:'#7f1d1d', icon:'❌' },
+        success: { bg:'#1a2d1a', border:'#14532d', icon:'✅' },
+        warning: { bg:'#2d2210', border:'#713f12', icon:'⚠️' }
+    };
+    const c = colors[type] || colors.error;
+    t.style.background = c.bg;
+    t.style.border = `1px solid ${c.border}`;
+    t.style.color = '#fff';
+    document.getElementById('toastIcon').textContent = c.icon;
+    document.getElementById('toastTitle').textContent = title;
+    document.getElementById('toastMsg').textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 4000);
+}
+</script>
+</body>
+</html>

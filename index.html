@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RSVP - BASNOM HIPMI OTOMOTIF JABAR</title>
+    <meta name="description" content="Konfirmasi kehadiran Anda untuk acara Ceremonial, Talkshow & Buka Bersama BASNOM HIPMI OTOMOTIF JAWA BARAT">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="js/config.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+        * { box-sizing: border-box; }
+
+        body { font-family: 'Inter', sans-serif; background: #0a0a0a; }
+
+        .card-bg {
+            background: linear-gradient(145deg, #111111, #1a1a1a);
+            border: 1px solid rgba(191, 149, 63, 0.2);
+        }
+
+        .gold-gradient {
+            background: linear-gradient(90deg, #BF953F, #FCF6BA, #B38728, #FBF5B7, #AA771C);
+        }
+
+        .gold-text {
+            background: linear-gradient(135deg, #BF953F 0%, #FCF6BA 40%, #B38728 60%, #AA771C 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .gold-border { border-color: rgba(191, 149, 63, 0.4); }
+
+        .input-field {
+            background: #0d0d0d;
+            border: 1px solid #2a2a2a;
+            color: white;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .input-field:focus {
+            border-color: #B38728;
+            box-shadow: 0 0 0 2px rgba(179, 135, 40, 0.15);
+            outline: none;
+        }
+        .input-field.error { border-color: #ef4444 !important; }
+        .input-field.valid { border-color: #22c55e !important; }
+
+        .btn-gold {
+            background: linear-gradient(90deg, #BF953F, #FCF6BA, #B38728);
+            background-size: 200% auto;
+            color: #000;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            transition: background-position 0.4s, transform 0.15s, box-shadow 0.2s;
+            box-shadow: 0 4px 20px rgba(179, 135, 40, 0.3);
+        }
+        .btn-gold:hover {
+            background-position: right center;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 28px rgba(179, 135, 40, 0.45);
+        }
+        .btn-gold:active { transform: translateY(0); }
+        .btn-gold:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Particle / shimmer header ornament */
+        .ornament { color: rgba(191,149,63,0.5); letter-spacing: 0.3em; font-size: 0.65rem; }
+
+        /* Toast Notification */
+        #toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(120%);
+            transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+            z-index: 9999;
+            min-width: 300px;
+            max-width: 90vw;
+        }
+        #toast.show { transform: translateX(-50%) translateY(0); }
+
+        /* Pulse ring on card */
+        .ring-gold {
+            box-shadow: 0 0 0 1px rgba(191,149,63,0.15), 0 25px 60px rgba(0,0,0,0.8);
+        }
+
+        /* Counter badge */
+        .counter-badge {
+            background: rgba(191,149,63,0.12);
+            border: 1px solid rgba(191,149,63,0.3);
+        }
+
+        /* Spinner */
+        .spinner {
+            border: 2px solid rgba(0,0,0,0.3);
+            border-top-color: #000;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            animation: spin 0.7s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Fade in animation */
+        .fade-in { animation: fadeIn 0.6s ease both; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Divider shimmer */
+        .divider-gold {
+            background: linear-gradient(90deg, transparent, rgba(191,149,63,0.4), transparent);
+            height: 1px;
+        }
+
+        /* Success Modal */
+        #successModal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            padding: 1rem;
+        }
+        #successModal.show { opacity: 1; pointer-events: all; }
+        #successModal .modal-card {
+            transform: scale(0.9);
+            transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        #successModal.show .modal-card { transform: scale(1); }
+
+        select option { background: #111; color: white; }
+
+        label { user-select: none; }
+        
+        /* Stepper dots */
+        .step-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: rgba(191,149,63,0.3);
+        }
+        .step-dot.active { background: #B38728; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4 py-10">
+
+    <!-- Background decorative grid -->
+    <div class="fixed inset-0 opacity-5 pointer-events-none" style="background-image: linear-gradient(rgba(191,149,63,0.3) 1px, transparent 1px), linear-gradient(to right, rgba(191,149,63,0.3) 1px, transparent 1px); background-size: 40px 40px;"></div>
+
+    <!-- Main Card -->
+    <div class="max-w-md w-full card-bg ring-gold rounded-2xl overflow-hidden fade-in" style="animation-delay:0.1s">
+
+        <!-- Gold top strip -->
+        <div class="gold-gradient h-1 w-full"></div>
+
+        <div class="p-8">
+            <!-- Header -->
+            <header class="text-center mb-8">
+                <p class="ornament tracking-widest mb-3">✦ &nbsp; B A S N O M &nbsp; ✦</p>
+                <h1 class="text-3xl font-bold gold-text uppercase" style="font-family:'Cinzel',serif;letter-spacing:0.05em;">HIPMI OTOMOTIF</h1>
+                <p class="text-xs tracking-widest text-gray-500 mt-1 uppercase">Jawa Barat</p>
+
+                <div class="divider-gold my-5"></div>
+
+                <!-- Event info card -->
+                <div class="rounded-xl p-4 space-y-2" style="background:rgba(191,149,63,0.05);border:1px solid rgba(191,149,63,0.15);">
+                    <p class="text-sm text-gray-300 font-medium">Ceremonial, Talkshow &amp; Buka Bersama</p>
+                    <p class="text-xl font-semibold text-yellow-400" style="font-family:'Cinzel',serif;">7 Maret 2026</p>
+                    <p class="text-xs text-gray-500">14.00 WIB - Selesai</p>
+                    <div class="divider-gold my-2"></div>
+                    <p class="text-xs text-gray-400">📍 Thee Matic Mall Majalaya</p>
+                    <div class="inline-block px-3 py-1 rounded-full text-xs font-semibold" style="background:rgba(191,149,63,0.15);border:1px solid rgba(191,149,63,0.35);color:#FCF6BA;">
+                        Dresscode: Hitam Gold
+                    </div>
+                </div>
+
+                <!-- Live RSVP Counter -->
+                <div id="counterWrap" class="counter-badge rounded-full px-4 py-2 mt-4 inline-flex items-center gap-2 text-xs text-yellow-500">
+                    <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                    <span id="counterText">Memuat data...</span>
+                </div>
+            </header>
+
+            <!-- RSVP Form -->
+            <form id="rsvpForm" class="space-y-5" novalidate>
+
+                <!-- Nama -->
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-yellow-600 mb-1.5 tracking-wide">
+                        Nama Lengkap <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="nama" autocomplete="name" required
+                        placeholder="Masukkan nama lengkap Anda"
+                        class="input-field w-full p-3 rounded-lg text-sm">
+                    <p id="namaErr" class="text-red-400 text-xs mt-1 hidden">Nama tidak boleh kosong.</p>
+                </div>
+
+                <!-- Komunitas -->
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-yellow-600 mb-1.5 tracking-wide">
+                        Komunitas / Instansi <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="komunitas" required
+                        placeholder="Nama komunitas atau instansi Anda"
+                        class="input-field w-full p-3 rounded-lg text-sm">
+                    <p id="komunitasErr" class="text-red-400 text-xs mt-1 hidden">Komunitas tidak boleh kosong.</p>
+                </div>
+
+                <!-- WhatsApp -->
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-yellow-600 mb-1.5 tracking-wide">
+                        Nomor WhatsApp <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm select-none">+</span>
+                        <input type="tel" id="whatsapp" required
+                            placeholder="628xxxxxxxxxx"
+                            class="input-field w-full p-3 pl-6 rounded-lg text-sm"
+                            maxlength="15">
+                    </div>
+                    <p class="text-gray-600 text-xs mt-1">Format: 628xxx (tanpa spasi atau tanda hubung)</p>
+                    <p id="waErr" class="text-red-400 text-xs mt-1 hidden">Nomor WhatsApp tidak valid (format: 628xxx).</p>
+                </div>
+
+                <!-- Status Kehadiran -->
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-yellow-600 mb-1.5 tracking-wide">
+                        Konfirmasi Kehadiran <span class="text-red-500">*</span>
+                    </label>
+                    <select id="status" class="input-field w-full p-3 rounded-lg text-sm cursor-pointer">
+                        <option value="Hadir">✅ &nbsp; Hadir</option>
+                        <option value="Tidak Hadir">❌ &nbsp; Tidak Hadir</option>
+                    </select>
+                </div>
+
+                <!-- Alasan / Pesan -->
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-yellow-600 mb-1.5 tracking-wide">
+                        Alasan / Pesan <span class="text-gray-600 text-xs normal-case font-normal">(opsional)</span>
+                    </label>
+                    <textarea id="alasan" rows="3" maxlength="300"
+                        placeholder="Catatan tambahan, ucapan, atau alasan jika tidak hadir..."
+                        class="input-field w-full p-3 rounded-lg text-sm resize-none"></textarea>
+                    <p class="text-right text-xs text-gray-600"><span id="charCount">0</span>/300</p>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" id="submitBtn" class="btn-gold w-full py-3.5 rounded-xl text-sm uppercase tracking-widest mt-2">
+                    <span id="btnText">Konfirmasi Sekarang</span>
+                    <span id="btnSpinner" class="hidden items-center justify-center gap-2">
+                        <span class="spinner"></span> Memproses...
+                    </span>
+                </button>
+
+                <p class="text-center text-xs text-gray-700 pt-1">
+                    Data Anda akan disimpan dan konfirmasi dikirim via WhatsApp.
+                </p>
+            </form>
+        </div>
+
+        <!-- Footer gold strip -->
+        <div class="gold-gradient h-0.5 w-full opacity-40"></div>
+        <div class="text-center py-3 text-xs text-gray-700">
+            &copy; 2026 &nbsp;BPD HIPMI OTOMOTIF JAWA BARAT
+        </div>
+    </div>
+
+    <!-- ============ SUCCESS MODAL ============ -->
+    <div id="successModal">
+        <div class="modal-card max-w-sm w-full card-bg rounded-2xl overflow-hidden shadow-2xl">
+            <div class="gold-gradient h-1 w-full"></div>
+            <div class="p-8 text-center space-y-4">
+                <div class="w-16 h-16 rounded-full flex items-center justify-center mx-auto" style="background:rgba(191,149,63,0.15);border:2px solid rgba(191,149,63,0.4);">
+                    <svg class="w-8 h-8 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                </div>
+                <h2 class="text-xl font-bold gold-text" style="font-family:'Cinzel',serif;">Berhasil!</h2>
+                <p class="text-sm text-gray-300" id="modalMsg">Konfirmasi kehadiran Anda telah kami terima.</p>
+                <p class="text-xs text-gray-500">Pesan konfirmasi telah dikirim ke WhatsApp Anda.</p>
+                <button id="modalClose" class="btn-gold w-full py-3 rounded-lg text-sm uppercase tracking-wider mt-2">
+                    Tutup
+                </button>
+            </div>
+            <div class="gold-gradient h-0.5 w-full opacity-40"></div>
+        </div>
+    </div>
+
+    <!-- ============ TOAST ============ -->
+    <div id="toast" class="rounded-xl p-4 shadow-2xl">
+        <div class="flex items-start gap-3">
+            <span id="toastIcon" class="text-lg">⚠️</span>
+            <div>
+                <p id="toastTitle" class="font-semibold text-sm"></p>
+                <p id="toastMsg" class="text-xs mt-0.5 opacity-80"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // ============================================================
+    //  UTILITIES
+    // ============================================================
+    function showToast(title, msg, type = 'error') {
+        const t = document.getElementById('toast');
+        const colors = {
+            error:   { bg: '#2d1a1a', border: '#7f1d1d', icon: '❌' },
+            success: { bg: '#1a2d1a', border: '#14532d', icon: '✅' },
+            warning: { bg: '#2d2210', border: '#713f12', icon: '⚠️' }
+        };
+        const c = colors[type] || colors.error;
+        t.style.background = c.bg;
+        t.style.border = `1px solid ${c.border}`;
+        t.style.color = '#fff';
+        document.getElementById('toastIcon').textContent = c.icon;
+        document.getElementById('toastTitle').textContent = title;
+        document.getElementById('toastMsg').textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 4000);
+    }
+
+    function showModal(nama, status) {
+        const icon = status === 'Hadir' ? '✅' : '📋';
+        document.getElementById('modalMsg').textContent =
+            `${icon} ${nama}, konfirmasi kehadiran (${status}) Anda telah kami terima!`;
+        document.getElementById('successModal').classList.add('show');
+    }
+
+    function setLoading(on) {
+        const btn  = document.getElementById('submitBtn');
+        const text = document.getElementById('btnText');
+        const spin = document.getElementById('btnSpinner');
+        btn.disabled = on;
+        text.classList.toggle('hidden', on);
+        spin.classList.toggle('hidden', !on);
+        spin.classList.toggle('flex', on);
+    }
+
+    function validateWA(val) {
+        return /^628\d{7,13}$/.test(val.replace(/\s|-/g, ''));
+    }
+
+    // Auto-format WA: strip leading 0, ensure starts with 62
+    document.getElementById('whatsapp').addEventListener('blur', function () {
+        let val = this.value.trim().replace(/\D/g, '');
+        if (val.startsWith('0')) val = '62' + val.slice(1);
+        if (val.startsWith('8')) val = '62' + val;
+        this.value = val;
+    });
+
+    // Character counter
+    document.getElementById('alasan').addEventListener('input', function () {
+        document.getElementById('charCount').textContent = this.value.length;
+    });
+
+    // ============================================================
+    //  LOAD RSVP COUNTER
+    // ============================================================
+    async function loadCounter() {
+        try {
+            const res = await CONFIG.tursoFetch([
+                { type: "execute", stmt: { sql: "SELECT COUNT(*) as total, SUM(CASE WHEN status='Hadir' THEN 1 ELSE 0 END) as hadir FROM attendance" } }
+            ]);
+            const row = res.results?.[0]?.response?.result?.rows?.[0];
+            const total = row?.[0]?.value ?? 0;
+            const hadir = row?.[1]?.value ?? 0;
+            document.getElementById('counterText').textContent =
+                `${total} peserta terdaftar · ${hadir} konfirmasi hadir`;
+        } catch {
+            document.getElementById('counterText').textContent = 'RSVP terbuka – daftar sekarang!';
+        }
+    }
+
+    // ============================================================
+    //  FORM SUBMIT
+    // ============================================================
+    document.getElementById('rsvpForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const nama      = document.getElementById('nama').value.trim();
+        const komunitas = document.getElementById('komunitas').value.trim();
+        const waRaw     = document.getElementById('whatsapp').value.trim().replace(/\D/g, '');
+        const status    = document.getElementById('status').value;
+        const alasan    = document.getElementById('alasan').value.trim();
+
+        // --- Validation ---
+        let valid = true;
+
+        const clearErr = (id, errId) => { document.getElementById(id).classList.remove('error'); document.getElementById(errId).classList.add('hidden'); };
+        const setErr   = (id, errId) => { document.getElementById(id).classList.add('error'); document.getElementById(errId).classList.remove('hidden'); valid = false; };
+
+        clearErr('nama', 'namaErr'); clearErr('komunitas', 'komunitasErr'); clearErr('whatsapp', 'waErr');
+
+        if (!nama)               setErr('nama', 'namaErr');
+        if (!komunitas)          setErr('komunitas', 'komunitasErr');
+        if (!validateWA(waRaw))  setErr('whatsapp', 'waErr');
+
+        if (!valid) {
+            showToast('Form belum lengkap', 'Harap periksa kolom yang ditandai merah.', 'warning');
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            // 1. Cek duplikasi nomor WA
+            const dup = await CONFIG.tursoFetch([
+                { type: "execute", stmt: { sql: "SELECT id FROM attendance WHERE whatsapp = ? LIMIT 1", args: [{ type:"text", value: waRaw }] } }
+            ]);
+            const dupRows = dup.results?.[0]?.response?.result?.rows ?? [];
+            if (dupRows.length > 0) {
+                showToast('Sudah Terdaftar', `Nomor WhatsApp ${waRaw} sudah pernah melakukan RSVP.`, 'warning');
+                setLoading(false);
+                return;
+            }
+
+            // 2. Simpan ke Turso
+            await CONFIG.tursoFetch([{
+                type: "execute",
+                stmt: {
+                    sql: "INSERT INTO attendance (nama, komunitas, whatsapp, status, alasan) VALUES (?, ?, ?, ?, ?)",
+                    args: [
+                        { type:"text", value: nama },
+                        { type:"text", value: komunitas },
+                        { type:"text", value: waRaw },
+                        { type:"text", value: status },
+                        { type:"text", value: alasan }
+                    ]
+                }
+            }]);
+
+            // 3. Kirim notifikasi WhatsApp
+            try {
+                await fetch(CONFIG.WA_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Basic ' + btoa(`${CONFIG.WA_USER}:${CONFIG.WA_PASS}`),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        phone: waRaw,
+                        message: CONFIG.buildWAMessage(nama, komunitas, status)
+                    })
+                });
+            } catch (waErr) {
+                console.warn('WA notif gagal (non-fatal):', waErr);
+            }
+
+            // 4. Success UI
+            showModal(nama, status);
+            document.getElementById('rsvpForm').reset();
+            document.getElementById('charCount').textContent = '0';
+            ['nama','komunitas','whatsapp'].forEach(id => document.getElementById(id).classList.remove('valid','error'));
+            loadCounter();
+
+        } catch (err) {
+            console.error(err);
+            showToast('Terjadi Kesalahan', 'Server tidak merespons. Coba beberapa saat lagi.', 'error');
+        } finally {
+            setLoading(false);
+        }
+    });
+
+    // Modal close
+    document.getElementById('modalClose').addEventListener('click', () => {
+        document.getElementById('successModal').classList.remove('show');
+    });
+    document.getElementById('successModal').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('successModal'))
+            document.getElementById('successModal').classList.remove('show');
+    });
+
+    // Real-time validation feedback
+    ['nama','komunitas'].forEach(id => {
+        document.getElementById(id).addEventListener('input', function () {
+            const errId = id + 'Err';
+            if (this.value.trim()) {
+                this.classList.remove('error'); this.classList.add('valid');
+                document.getElementById(errId).classList.add('hidden');
+            } else {
+                this.classList.remove('valid');
+            }
+        });
+    });
+
+    document.getElementById('whatsapp').addEventListener('input', function () {
+        const val = this.value.replace(/\D/g, '');
+        if (validateWA(val)) {
+            this.classList.remove('error'); this.classList.add('valid');
+            document.getElementById('waErr').classList.add('hidden');
+        } else {
+            this.classList.remove('valid');
+        }
+    });
+
+    // Init
+    loadCounter();
+    </script>
+</body>
+</html>
