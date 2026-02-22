@@ -11,7 +11,7 @@ const CONFIG = {
     WA_API_URL: "https://wa.fath.my.id/send/message",
     WA_USER: "cecep",
     WA_PASS: "126126",
-
+  //
     // === Admin ===
     ADMIN_PIN: "12345678",
 
