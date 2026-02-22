@@ -104,6 +104,9 @@
                 <p class="text-xs text-gray-500 mt-1 tracking-widest uppercase">BASNOM HIPMI OTOMOTIF JABAR</p>
             </div>
 
+            <!-- Setup warning -->
+            <div id="setupWarnAdmin" class="hidden rounded-lg p-3 text-xs leading-relaxed" style="background:rgba(124,45,18,0.2);border:1px solid rgba(194,65,12,0.4);color:#fb923c;"></div>
+
             <div class="space-y-4">
                 <div>
                     <label class="text-xs font-semibold uppercase text-yellow-600 tracking-wide block mb-2">Masukkan PIN Admin</label>
@@ -333,7 +336,13 @@ async function loadData() {
 
     } catch (err) {
         console.error(err);
-        showToast('Error', 'Gagal mengambil data dari server.', 'error');
+        if (err.message === 'TOKEN_PLACEHOLDER') {
+            showToast('Setup', 'Isi TURSO_TOKEN di js/config.js terlebih dahulu.', 'error');
+        } else if (err.message === 'FILE_PROTOCOL') {
+            showToast('Gunakan HTTP Server', 'Buka via Live Server atau hosting, bukan file:// langsung.', 'error');
+        } else {
+            showToast('Error', 'Gagal mengambil data: ' + (err.message || 'unknown'), 'error');
+        }
     } finally {
         document.getElementById('loadingState').style.display = 'none';
     }
@@ -476,7 +485,7 @@ async function confirmDelete() {
     try {
         await CONFIG.tursoFetch([{
             type: "execute",
-            stmt: { sql: "DELETE FROM attendance WHERE id = ?", args: [{ type:"integer", value: pendingDeleteId }] }
+            stmt: { sql: "DELETE FROM attendance WHERE id = ?", args: [{type:"integer",value:String(pendingDeleteId)}] }
         }]);
         allData = allData.filter(r => r.id !== pendingDeleteId);
         updateStats();
@@ -581,6 +590,22 @@ function showToast(title, msg, type = 'error') {
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 4000);
 }
+
+// Setup check on load
+(function checkSetup() {
+    const msgs = [];
+    if (!CONFIG.TURSO_TOKEN || CONFIG.TURSO_TOKEN.endsWith('...')) {
+        msgs.push('⚠ <strong>TURSO_TOKEN</strong> belum diisi di js/config.js.');
+    }
+    if (location.protocol === 'file:') {
+        msgs.push('⚠ Dibuka via <strong>file://</strong> — gunakan <strong>Live Server</strong> atau deploy ke hosting.');
+    }
+    if (msgs.length > 0) {
+        const el = document.getElementById('setupWarnAdmin');
+        el.innerHTML = msgs.join('<br>');
+        el.classList.remove('hidden');
+    }
+})();
 </script>
 </body>
 </html>

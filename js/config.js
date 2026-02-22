@@ -5,7 +5,7 @@
 const CONFIG = {
     // === Turso Database ===
     TURSO_URL: "https://otoinvinitation-cecepabuazhar.aws-ap-northeast-1.turso.io",
-    TURSO_TOKEN: "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9...", // << PASTE FULL TOKEN DI SINI
+    TURSO_TOKEN: "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3NzE4MDIwOTgsImlkIjoiYzlkYzM3NjYtOTNmYi00ZDcyLWFmNzktMzg5Y2Y4NWU5Yzc5IiwicmlkIjoiZjI5YmMyYmItOTNlMS00NGFiLWI2MjMtNDEzYzQzNTRkMzRiIn0.X6kNwDtYuHH1jjSUkFvG2z4fE3Bh9e2Yb_hZvdjcDF2VyHrtQeWMW5CpvUrCxZ-0mqg398ZvQV7pchTDUlpQDA", // << PASTE FULL TOKEN DI SINI
 
     // === WA Gateway ===
     WA_API_URL: "https://wa.fath.my.id/send/message",
@@ -36,6 +36,14 @@ CONFIG.buildWAMessage = (nama, komunitas, status) => {
 
 // Helper: Turso pipeline fetch
 CONFIG.tursoFetch = async (requests) => {
+    // Guard: token belum diisi
+    if (!CONFIG.TURSO_TOKEN || CONFIG.TURSO_TOKEN.endsWith('...')) {
+        throw new Error('TOKEN_PLACEHOLDER');
+    }
+    // Guard: harus jalan dari HTTP, bukan file://
+    if (location.protocol === 'file:') {
+        throw new Error('FILE_PROTOCOL');
+    }
     const res = await fetch(`${CONFIG.TURSO_URL}/v2/pipeline`, {
         method: 'POST',
         headers: {
@@ -44,6 +52,10 @@ CONFIG.tursoFetch = async (requests) => {
         },
         body: JSON.stringify({ requests })
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) {
+        let errBody = '';
+        try { errBody = await res.text(); } catch {}
+        throw new Error(`HTTP ${res.status}: ${errBody.slice(0, 200)}`);
+    }
     return res.json();
 };
