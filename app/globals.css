@@ -1,0 +1,205 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    font-family: "Inter", sans-serif;
+  }
+}
+
+@layer utilities {
+  .gold-gradient {
+    background: linear-gradient(
+      90deg,
+      #bf953f,
+      #fcf6ba,
+      #b38728,
+      #fbf5b7,
+      #aa771c
+    );
+  }
+  .gold-text {
+    background: linear-gradient(
+      135deg,
+      #bf953f 0%,
+      #fcf6ba 40%,
+      #b38728 60%,
+      #aa771c 100%
+    );
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .divider-gold {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(191, 149, 63, 0.4),
+      transparent
+    );
+    height: 1px;
+  }
+  .card-bg {
+    background: linear-gradient(145deg, #111111, #1a1a1a);
+    border: 1px solid rgba(191, 149, 63, 0.2);
+  }
+  .ring-gold {
+    box-shadow:
+      0 0 0 1px rgba(191, 149, 63, 0.15),
+      0 25px 60px rgba(0, 0, 0, 0.8);
+  }
+  .btn-gold {
+    background: linear-gradient(90deg, #bf953f, #fcf6ba, #b38728);
+    background-size: 200% auto;
+    color: #000;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    transition:
+      background-position 0.4s,
+      transform 0.15s,
+      box-shadow 0.2s;
+    box-shadow: 0 4px 20px rgba(179, 135, 40, 0.3);
+  }
+  .btn-gold:hover {
+    background-position: right center;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 28px rgba(179, 135, 40, 0.45);
+  }
+  .btn-gold:active {
+    transform: translateY(0);
+  }
+  .btn-gold:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+  .input-field {
+    background: #0d0d0d;
+    border: 1px solid #2a2a2a;
+    color: white;
+    transition:
+      border-color 0.2s,
+      box-shadow 0.2s;
+    outline: none;
+  }
+  .input-field:focus {
+    border-color: #b38728;
+    box-shadow: 0 0 0 2px rgba(179, 135, 40, 0.15);
+  }
+  .input-field.error {
+    border-color: #ef4444 !important;
+  }
+  .input-field.valid {
+    border-color: #22c55e !important;
+  }
+  .badge-hadir {
+    background: rgba(34, 197, 94, 0.15);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    border-radius: 9999px;
+    padding: 2px 10px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .badge-tidak {
+    background: rgba(239, 68, 68, 0.12);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 9999px;
+    padding: 2px 10px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .badge-checkin {
+    background: rgba(251, 191, 36, 0.15);
+    color: #fbbf24;
+    border: 1px solid rgba(251, 191, 36, 0.35);
+    border-radius: 9999px;
+    padding: 2px 10px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .badge-wa-sent {
+    background: rgba(34, 197, 94, 0.12);
+    color: #86efac;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    border-radius: 9999px;
+    padding: 2px 10px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .ticket-card {
+    position: relative;
+    background: linear-gradient(160deg, #111 0%, #191510 50%, #111 100%);
+    border: 1px solid rgba(191, 149, 63, 0.35);
+    border-radius: 1.25rem;
+    overflow: hidden;
+  }
+  .ticket-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(
+      90deg,
+      #bf953f,
+      #fcf6ba,
+      #b38728,
+      #fbf5b7,
+      #aa771c
+    );
+  }
+  .ticket-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(
+      rgba(191, 149, 63, 0.04) 1px,
+      transparent 1px
+    );
+    background-size: 22px 22px;
+    pointer-events: none;
+  }
+  .perforation {
+    border-top: 2px dashed rgba(191, 149, 63, 0.25);
+    position: relative;
+  }
+  .perforation::before,
+  .perforation::after {
+    content: "";
+    position: absolute;
+    top: -12px;
+    width: 22px;
+    height: 22px;
+    background: #0a0a0a;
+    border-radius: 50%;
+    border: 1px solid rgba(191, 149, 63, 0.2);
+  }
+  .perforation::before {
+    left: -11px;
+  }
+  .perforation::after {
+    right: -11px;
+  }
+  .spinner {
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-top-color: #b38728;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+}
