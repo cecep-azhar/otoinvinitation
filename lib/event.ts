@@ -1,15 +1,17 @@
+// Semua EVENT_* pakai NEXT_PUBLIC_ agar terbaca di client components (browser)
+// Fallback hardcoded tetap ada jika env tidak di-set
 const e = {
-  nama:          process.env.EVENT_NAMA        ?? "Ceremonial, Talkshow & Buka Bersama",
-  organisasi:    process.env.EVENT_ORGANISASI  ?? "BASNOM HIPMI OTOMOTIF JAWA BARAT",
-  tanggal:       process.env.EVENT_TANGGAL     ?? "7 Maret 2026",
-  waktu:         process.env.EVENT_WAKTU       ?? "14.00 WIB - Selesai",
-  lokasi:        process.env.EVENT_LOKASI      ?? "Thee Matic Mall Majalaya",
-  dresscode:     process.env.EVENT_DRESSCODE   ?? "Hitam Gold",
-  contact:       process.env.EVENT_CONTACT     ?? "Kabid Digital & Marketplace BPD HIPMI OTOMOTIF JAWA BARAT",
-  wa_intro:      process.env.EVENT_WA_INTRO    ?? "Hana — Asisten Virtual BPD HIPMI OTOMOTIF JAWA BARAT",
+  nama:       process.env.NEXT_PUBLIC_EVENT_NAMA        ?? "Ceremonial, Talkshow & Buka Bersama",
+  organisasi: process.env.NEXT_PUBLIC_EVENT_ORGANISASI  ?? "BASNOM HIPMI OTOMOTIF JAWA BARAT",
+  tanggal:    process.env.NEXT_PUBLIC_EVENT_TANGGAL     ?? "7 Maret 2026",
+  waktu:      process.env.NEXT_PUBLIC_EVENT_WAKTU       ?? "14.00 WIB - Selesai",
+  lokasi:     process.env.NEXT_PUBLIC_EVENT_LOKASI      ?? "Thee Matic Mall Majalaya",
+  dresscode:  process.env.NEXT_PUBLIC_EVENT_DRESSCODE   ?? "Hitam Gold",
+  contact:    process.env.NEXT_PUBLIC_EVENT_CONTACT     ?? "Kabid Digital & Marketplace BPD HIPMI OTOMOTIF JAWA BARAT",
+  wa_intro:   process.env.NEXT_PUBLIC_EVENT_WA_INTRO    ?? "Hana — Asisten Virtual BPD HIPMI OTOMOTIF JAWA BARAT",
 };
 
-/** Event config (read from .env / Vercel ENV VARS at runtime) */
+/** Event config – readable on both server & client */
 export const EVENT = e;
 
 /** Generate random unique token */
@@ -26,7 +28,7 @@ export function buildInvitationURL(base: string, token: string): string {
   return `${base}/invitation?token=${token}`;
 }
 
-/** Build WA confirmation message */
+/** Build WA confirmation message (server-side only via /api/wa) */
 export function buildWAMessage(
   nama: string,
   komunitas: string,
