@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { EVENT } from "@/lib/event";
+import { useEvent } from "@/lib/useEvent";
 
 interface ToastState {
   show: boolean;
@@ -139,7 +139,7 @@ export default function RSVPPage() {
     }
   };
 
-  const e = EVENT;
+  const e = useEvent();
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-4 py-10 relative">

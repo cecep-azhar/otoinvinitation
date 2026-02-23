@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { EVENT } from "@/lib/event";
+import { useEvent } from "@/lib/useEvent";
 import type { Attendance } from "@/lib/schema";
 
 function formatDate(str: string | null) {
@@ -33,7 +33,7 @@ export default function InvitationPage() {
   }, []);
 
   const inviteURL = typeof window !== "undefined" ? window.location.href : "";
-  const e = EVENT;
+  const e = useEvent();
 
   if (loading) {
     return (
