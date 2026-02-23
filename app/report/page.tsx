@@ -419,11 +419,16 @@ export default function ReportPage() {
                       <tr key={r.id} className="border-b border-white/4 hover:bg-yellow-900/4 transition-colors">
                         <td className="px-4 py-[0.7rem] text-gray-600 text-xs">{i + 1}</td>
                         <td className="px-4 py-[0.7rem] font-medium text-white">
-                          {r.nama}
-                          {r.invite_token && (
-                            <a href={`/invitation?token=${encodeURIComponent(r.invite_token)}`} target="_blank" rel="noopener noreferrer"
-                              className="ml-1 text-yellow-800 hover:text-yellow-400 transition" title="Buka undangan digital">🎟️</a>
-                          )}
+                          <div className="flex flex-col gap-1.5 items-start">
+                            <span>{r.nama}</span>
+                            {r.invite_token && (
+                              <a href={`/invitation?token=${encodeURIComponent(r.invite_token)}`} target="_blank" rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 text-[0.65rem] font-semibold border border-yellow-700/40 text-yellow-600 hover:text-black hover:bg-yellow-600 px-2 py-1 rounded transition-colors" title="Buka undangan digital">
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                                Link Reservasi
+                              </a>
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-[0.7rem] text-gray-300">{r.komunitas}</td>
                         <td className="px-4 py-[0.7rem]">
