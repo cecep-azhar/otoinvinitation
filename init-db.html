@@ -34,20 +34,25 @@
             </div>
 
             <div class="text-xs text-gray-600">
-                <p class="mb-1 text-gray-500">SQL yang akan dijalankan:</p>
+                <p class="mb-1 text-gray-500">SQL yang akan dijalankan (aman diulang – tidak menghapus data):</p>
                 <pre>CREATE TABLE IF NOT EXISTS attendance (
-  id         INTEGER PRIMARY KEY AUTOINCREMENT,
-  nama       TEXT    NOT NULL,
-  komunitas  TEXT    NOT NULL,
-  whatsapp   TEXT    NOT NULL,
-  status     TEXT    NOT NULL DEFAULT 'Hadir',
-  alasan     TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);</pre>
+  id           INTEGER  PRIMARY KEY AUTOINCREMENT,
+  nama         TEXT     NOT NULL,
+  komunitas    TEXT     NOT NULL,
+  whatsapp     TEXT     NOT NULL,
+  status       TEXT     NOT NULL DEFAULT 'Hadir',
+  alasan       TEXT,
+  invite_token TEXT     UNIQUE,
+  checkin_at   DATETIME,
+  created_at   DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+-- Kolom migrasi (aman jika kolom sudah ada):
+ALTER TABLE attendance ADD COLUMN invite_token TEXT UNIQUE;
+ALTER TABLE attendance ADD COLUMN checkin_at   DATETIME;</pre>
             </div>
 
             <button id="initBtn" onclick="initDB()" class="btn-gold w-full py-3 rounded-lg text-sm uppercase tracking-widest">
-                Inisialisasi Database Sekarang
+                Inisialisasi / Migrasi Database
             </button>
 
             <div id="result" class="hidden">
@@ -67,29 +72,50 @@
         res.classList.remove('hidden');
         txt.textContent = 'Menghubungi Turso...\n';
 
+        const log = (msg) => { txt.textContent += msg + '\n'; };
+
         try {
-            const data = await CONFIG.tursoFetch([{
+            // Step 1: Create table (idempotent)
+            log('▶ Membuat tabel attendance...');
+            await CONFIG.tursoFetch([{
                 type: "execute",
                 stmt: {
                     sql: `CREATE TABLE IF NOT EXISTS attendance (
-                            id         INTEGER  PRIMARY KEY AUTOINCREMENT,
-                            nama       TEXT     NOT NULL,
-                            komunitas  TEXT     NOT NULL,
-                            whatsapp   TEXT     NOT NULL,
-                            status     TEXT     NOT NULL DEFAULT 'Hadir',
-                            alasan     TEXT,
-                            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                            id           INTEGER  PRIMARY KEY AUTOINCREMENT,
+                            nama         TEXT     NOT NULL,
+                            komunitas    TEXT     NOT NULL,
+                            whatsapp     TEXT     NOT NULL,
+                            status       TEXT     NOT NULL DEFAULT 'Hadir',
+                            alasan       TEXT,
+                            invite_token TEXT     UNIQUE,
+                            checkin_at   DATETIME,
+                            created_at   DATETIME DEFAULT CURRENT_TIMESTAMP
                           )`
                 }
             }]);
+            log('✅ Tabel attendance siap.\n');
 
-            txt.textContent += JSON.stringify(data, null, 2);
-            txt.textContent += '\n\n✅ BERHASIL! Tabel attendance siap digunakan.';
+            // Step 2: Migration – add columns if not exist (ignore errors = column exists)
+            log('▶ Migrasi kolom (invite_token, checkin_at)...');
+            for (const sql of [
+                "ALTER TABLE attendance ADD COLUMN invite_token TEXT",
+                "ALTER TABLE attendance ADD COLUMN checkin_at DATETIME"
+            ]) {
+                try {
+                    await CONFIG.tursoFetch([{ type:"execute", stmt:{ sql } }]);
+                    log('  + ' + sql.split(' ').slice(4).join(' ') + ' → ditambahkan.');
+                } catch (e) {
+                    // Turso returns error if column exists – safe to ignore
+                    log('  ~ kolom sudah ada, dilewati.');
+                }
+            }
+
+            log('\n🎉 SELESAI! Database siap dengan semua fitur terbaru.');
             btn.textContent = '✅ Selesai';
             btn.style.background = 'rgba(34,197,94,0.2)';
             btn.style.color = '#4ade80';
         } catch (err) {
-            txt.textContent += '❌ ERROR: ' + err.message;
+            log('❌ ERROR: ' + err.message);
             btn.textContent = 'Coba Lagi';
             btn.disabled = false;
         }

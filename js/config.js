@@ -11,7 +11,7 @@ const CONFIG = {
     WA_API_URL: "https://wa.fath.my.id/send/message",
     WA_USER: "cecep",
     WA_PASS: "126126",
-  //
+
     // === Admin ===
     ADMIN_PIN: "12345678",
 
@@ -27,11 +27,68 @@ const CONFIG = {
     }
 };
 
-// Helper: Build WA message
-CONFIG.buildWAMessage = (nama, komunitas, status) => {
+// Helper: Generate unique token (UUID v4-ish + timestamp suffix)
+CONFIG.generateToken = () => {
+    const s4 = () => Math.floor((1 + Math.random()) * 0x10000).toString(16).slice(1);
+    return `${s4()}${s4()}-${s4()}-4${s4().slice(1)}-${s4()}-${s4()}${s4()}${Date.now().toString(36)}`;
+};
+
+// Helper: Build invitation URL
+CONFIG.buildInvitationURL = (token) => {
+    const base = (typeof location !== 'undefined')
+        ? `${location.origin}${location.pathname.replace(/\/[^/]*$/, '')}`
+        : '';
+    return `${base}/invitation.html?token=${token}`;
+};
+
+// Helper: Build WA message (with livelier language + invitation link)
+CONFIG.buildWAMessage = (nama, komunitas, status, inviteURL = '') => {
     const e = CONFIG.EVENT;
-    const icon = status === "Hadir" ? "✅" : "❌";
-    return `${icon} *Konfirmasi RSVP Diterima!*\n\nTerima kasih *${nama}* dari *${komunitas}* telah melakukan konfirmasi kehadiran *(${status})* untuk acara:\n\n🏆 *${e.nama}*\n🏢 ${e.organisasi}\n\n📅 Tanggal  : ${e.tanggal}\n⏰ Waktu    : ${e.waktu}\n📍 Lokasi   : ${e.lokasi}\n👔 Dresscode: *${e.dresscode}*\n\nKami tunggu kehadiran Anda!\n\nRegards,\n*${e.contact}*`;
+    if (status === "Hadir") {
+        return (
+`🎉 *Halo, ${nama}!*
+
+Alhamdulillah, kami dengan senang hati mengonfirmasi pendaftaran Anda! 🙏
+
+Anda resmi terdaftar sebagai *tamu undangan* acara:
+
+✨ *${e.nama}*
+🏢 ${e.organisasi}
+
+📅 *Tanggal* : ${e.tanggal}
+⏰ *Waktu*   : ${e.waktu}
+📍 *Lokasi*  : ${e.lokasi}
+👔 *Dresscode*: *${e.dresscode}*
+
+🎟️ *Undangan Digital Anda:*
+${inviteURL}
+
+Simpan link di atas — tunjukkan kepada panitia saat hadir untuk proses check-in yang cepat & mudah. Jangan lupa datang tepat waktu ya! 😊
+
+_Sampai jumpa di acara!_ 🚗✨
+
+Salam hangat,
+*${e.contact}*`
+        );
+    } else {
+        return (
+`😊 *Halo, ${nama}!*
+
+Terima kasih sudah meluangkan waktu untuk merespons undangan kami. Kami sangat menghargainya! 🙏
+
+Kami mencatat bahwa Anda *tidak dapat hadir* pada acara:
+
+✨ *${e.nama}*
+🏢 ${e.organisasi}
+📅 ${e.tanggal} · ${e.waktu}
+📍 ${e.lokasi}
+
+Semoga di lain kesempatan kita bisa bertemu. Jika ada perubahan rencana, tidak ada salahnya hadir mendadak — kami selalu senang! 😄
+
+Salam,
+*${e.contact}*`
+        );
+    }
 };
 
 // Helper: Turso pipeline fetch

@@ -6,6 +6,8 @@
     <title>Admin Dashboard – BASNOM HIPMI</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- QR Scanner -->
+    <script src="https://unpkg.com/jsqr@1.4.0/dist/jsQR.js"></script>
     <script src="js/config.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap');
@@ -89,6 +91,20 @@
         /* Empty state */
         #emptyState { display:none; }
 
+        /* Scanner modal */
+        #scanModal { position:fixed; inset:0; background:rgba(0,0,0,0.92); display:flex; align-items:center; justify-content:center; z-index:99990; opacity:0; pointer-events:none; transition:opacity 0.25s; padding:1rem; }
+        #scanModal.show { opacity:1; pointer-events:all; }
+        #scanVideo { width:100%; border-radius:0.75rem; }
+        .scan-ring { position:absolute; inset:0; border:2px solid rgba(191,149,63,0.7); border-radius:0.75rem; pointer-events:none; animation: scanPulse 1.5s ease-in-out infinite; }
+        @keyframes scanPulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+        /* Check-in result modal */
+        #checkinModal { position:fixed; inset:0; background:rgba(0,0,0,0.88); display:flex; align-items:center; justify-content:center; z-index:99995; opacity:0; pointer-events:none; transition:opacity 0.25s; padding:1rem; }
+        #checkinModal.show { opacity:1; pointer-events:all; }
+
+        /* Badge check-in */
+        .badge-checkin { background: rgba(251,191,36,0.15); color: #fbbf24; border: 1px solid rgba(251,191,36,0.35); border-radius: 9999px; padding: 2px 10px; font-size: 0.7rem; font-weight: 600; white-space: nowrap; }
+
         @media (max-width:640px) { th, td { padding: 0.5rem 0.6rem; } }
     </style>
 </head>
@@ -144,6 +160,12 @@
                 <p class="text-xs text-gray-500 mt-0.5">Ceremonial, Talkshow & Buka Bersama · 7 Maret 2026</p>
             </div>
             <div class="flex items-center gap-2">
+                <button onclick="openScanner()" class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm border border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10 transition font-semibold">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/>
+                    </svg>
+                    Scan QR
+                </button>
                 <button onclick="loadData()" id="refreshBtn" class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm border border-yellow-600/30 text-yellow-600 hover:bg-yellow-600/10 transition">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                     Refresh
@@ -159,7 +181,7 @@
         </div>
 
         <!-- Stat Cards -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
             <div class="stat-card">
                 <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Total RSVP</p>
                 <p class="text-3xl font-bold gold-text" id="statTotal">—</p>
@@ -176,6 +198,10 @@
                 <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">Tingkat Hadir</p>
                 <p class="text-3xl font-bold text-yellow-400" id="statPct">—</p>
             </div>
+            <div class="stat-card" style="border-color:rgba(251,191,36,0.3);">
+                <p class="text-xs text-gray-500 uppercase tracking-wide mb-1">✅ Check-in</p>
+                <p class="text-3xl font-bold text-yellow-300" id="statCheckin">—</p>
+            </div>
         </div>
 
         <!-- Filter & Search bar -->
@@ -185,6 +211,11 @@
                 <option value="">Semua Status</option>
                 <option value="Hadir">✅ Hadir</option>
                 <option value="Tidak Hadir">❌ Tidak Hadir</option>
+            </select>
+            <select id="filterCheckin" class="filter-sel" onchange="renderTable()">
+                <option value="">Semua Check-in</option>
+                <option value="yes">🎫 Sudah Check-in</option>
+                <option value="no">⏳ Belum Check-in</option>
             </select>
             <select id="filterKomunitas" class="filter-sel" onchange="renderTable()">
                 <option value="">Semua Komunitas</option>
@@ -215,7 +246,8 @@
                             <th onclick="sortBy('nama')">Nama</th>
                             <th onclick="sortBy('komunitas')">Komunitas</th>
                             <th onclick="sortBy('whatsapp')">WhatsApp</th>
-                            <th onclick="sortBy('status')">Status</th>
+                            <th onclick="sortBy('status')">RSVP</th>
+                            <th onclick="sortBy('checkin_at')">Check-in</th>
                             <th>Alasan / Pesan</th>
                             <th onclick="sortBy('created_at')">Waktu Daftar</th>
                             <th style="width:40px"></th>
@@ -252,6 +284,61 @@
     </div>
 </div>
 
+<!-- ==================== QR SCANNER MODAL ==================== -->
+<div id="scanModal">
+    <div class="card max-w-sm w-full overflow-hidden">
+        <div class="gold-gradient h-1 w-full"></div>
+        <div class="p-5 space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="font-semibold text-yellow-400">📷 Scan QR Tamu</h3>
+                <button onclick="closeScanner()" class="text-gray-500 hover:text-white text-xl leading-none">&times;</button>
+            </div>
+            <p class="text-xs text-gray-500">Arahkan kamera ke QR Code pada undangan digital tamu. Check-in otomatis dilakukan saat QR berhasil dibaca.</p>
+
+            <!-- Camera preview -->
+            <div class="relative rounded-xl overflow-hidden bg-black" style="min-height:240px;">
+                <video id="scanVideo" autoplay playsinline muted></video>
+                <canvas id="scanCanvas" class="hidden"></canvas>
+                <div class="scan-ring"></div>
+                <div id="scanLine" style="position:absolute;top:50%;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,rgba(191,149,63,0.8),transparent);animation:scanLine 1.8s ease-in-out infinite;"></div>
+            </div>
+            <style>@keyframes scanLine { 0%{top:20%} 50%{top:75%} 100%{top:20%} }</style>
+
+            <!-- Manual input fallback -->
+            <div class="space-y-2">
+                <p class="text-xs text-gray-600">Atau masukkan token manual:</p>
+                <div class="flex gap-2">
+                    <input type="text" id="manualToken" placeholder="Paste token undangan..."
+                        class="flex-1 bg-black border border-gray-700 text-white text-xs rounded-lg px-3 py-2 focus:border-yellow-600 outline-none">
+                    <button onclick="processToken(document.getElementById('manualToken').value.trim())"
+                        class="btn-gold px-4 py-2 rounded-lg text-xs whitespace-nowrap">Check-in</button>
+                </div>
+            </div>
+
+            <p id="scanStatus" class="text-xs text-center text-gray-600">Menunggu QR...</p>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== CHECK-IN RESULT MODAL ==================== -->
+<div id="checkinModal">
+    <div class="card max-w-sm w-full overflow-hidden">
+        <div class="gold-gradient h-1 w-full"></div>
+        <div class="p-7 space-y-4 text-center">
+            <div class="text-6xl" id="checkinResultIcon">✅</div>
+            <h3 class="text-xl font-bold" id="checkinResultTitle">Check-in Berhasil!</h3>
+            <div class="rounded-xl p-4 space-y-2 text-left" style="background:rgba(191,149,63,0.05);border:1px solid rgba(191,149,63,0.2);">
+                <p class="text-sm font-semibold text-white" id="checkinResultNama">—</p>
+                <p class="text-xs text-gray-400" id="checkinResultKomunitas">—</p>
+                <p class="text-xs text-gray-500 mt-2" id="checkinResultTime">—</p>
+            </div>
+            <button onclick="closeCheckinModal()" class="btn-gold w-full py-3 rounded-lg text-sm uppercase tracking-wide">
+                OK
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- Toast -->
 <div id="toast">
     <div class="flex items-start gap-3">
@@ -279,9 +366,8 @@ function checkPin() {
     const pin = document.getElementById('pinInput').value;
     document.getElementById('pinErr').classList.add('hidden');
     if (pin === CONFIG.ADMIN_PIN) {
-        document.getElementById('loginArea').style.display = 'none';
-        document.getElementById('reportArea').style.display = 'block';
-        loadData();
+        sessionStorage.setItem('admin_auth', '1');
+        showDashboard();
     } else {
         document.getElementById('pinErr').classList.remove('hidden');
         document.getElementById('pinInput').value = '';
@@ -289,11 +375,23 @@ function checkPin() {
     }
 }
 
+function showDashboard() {
+    document.getElementById('loginArea').style.display = 'none';
+    document.getElementById('reportArea').style.display = 'block';
+    loadData();
+}
+
 function logout() {
+    sessionStorage.removeItem('admin_auth');
     document.getElementById('loginArea').style.display = 'flex';
     document.getElementById('reportArea').style.display = 'none';
     document.getElementById('pinInput').value = '';
     updatePinDots('');
+}
+
+// Auto-login jika sesi masih aktif
+if (sessionStorage.getItem('admin_auth') === '1') {
+    showDashboard();
 }
 
 document.getElementById('pinInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') checkPin(); });
@@ -317,7 +415,7 @@ async function loadData() {
     try {
         const res = await CONFIG.tursoFetch([{
             type: "execute",
-            stmt: { sql: "SELECT id, nama, komunitas, whatsapp, status, alasan, created_at FROM attendance ORDER BY id DESC" }
+            stmt: { sql: "SELECT id, nama, komunitas, whatsapp, status, alasan, invite_token, checkin_at, created_at FROM attendance ORDER BY id DESC" }
         }]);
 
         const result = res.results?.[0]?.response?.result;
@@ -352,14 +450,16 @@ async function loadData() {
 //  STATS
 // ================================================================
 function updateStats() {
-    const total  = allData.length;
-    const hadir  = allData.filter(r => r.status === 'Hadir').length;
-    const tidak  = total - hadir;
-    const pct    = total > 0 ? Math.round((hadir / total) * 100) : 0;
-    document.getElementById('statTotal').textContent = total;
-    document.getElementById('statHadir').textContent = hadir;
-    document.getElementById('statTidak').textContent = tidak;
-    document.getElementById('statPct').textContent   = pct + '%';
+    const total   = allData.length;
+    const hadir   = allData.filter(r => r.status === 'Hadir').length;
+    const tidak   = total - hadir;
+    const pct     = total > 0 ? Math.round((hadir / total) * 100) : 0;
+    const checkin = allData.filter(r => !!r.checkin_at).length;
+    document.getElementById('statTotal').textContent   = total;
+    document.getElementById('statHadir').textContent   = hadir;
+    document.getElementById('statTidak').textContent   = tidak;
+    document.getElementById('statPct').textContent     = pct + '%';
+    document.getElementById('statCheckin').textContent = checkin;
 }
 
 // ================================================================
@@ -396,9 +496,10 @@ function sortBy(col) {
 //  RENDER TABLE
 // ================================================================
 function renderTable() {
-    const search   = document.getElementById('searchInput').value.toLowerCase();
-    const filterSt = document.getElementById('filterStatus').value;
-    const filterKm = document.getElementById('filterKomunitas').value;
+    const search    = document.getElementById('searchInput').value.toLowerCase();
+    const filterSt  = document.getElementById('filterStatus').value;
+    const filterKm  = document.getElementById('filterKomunitas').value;
+    const filterCi  = document.getElementById('filterCheckin').value;  // 'yes' | 'no' | ''
 
     let filtered = allData.filter(r => {
         const matchSearch = !search ||
@@ -407,7 +508,9 @@ function renderTable() {
             r.whatsapp?.includes(search);
         const matchSt = !filterSt || r.status === filterSt;
         const matchKm = !filterKm || r.komunitas === filterKm;
-        return matchSearch && matchSt && matchKm;
+        const matchCi = !filterCi ||
+            (filterCi === 'yes' ? !!r.checkin_at : !r.checkin_at);
+        return matchSearch && matchSt && matchKm && matchCi;
     });
 
     // Sort
@@ -436,10 +539,31 @@ function renderTable() {
         const badge = r.status === 'Hadir'
             ? `<span class="badge-hadir">✅ Hadir</span>`
             : `<span class="badge-tidak">❌ Tidak Hadir</span>`;
+
+        let ciBadge;
+        if (r.checkin_at) {
+            ciBadge = `<span class="badge-checkin">🎫 ${formatDate(r.checkin_at)}</span>`;
+        } else if (r.status === 'Hadir') {
+            ciBadge = `<button onclick="manualCheckin(${r.id},'${escHtml(r.nama)}')"
+                class="text-xs px-2 py-1 rounded border border-yellow-700/40 text-yellow-700 hover:bg-yellow-900/20 transition whitespace-nowrap">
+                Tandai Hadir
+            </button>`;
+        } else {
+            ciBadge = `<span class="text-gray-700 text-xs">—</span>`;
+        }
+
         const ts = r.created_at ? formatDate(r.created_at) : '—';
+
+        // Invite link shortcut
+        const invLink = r.invite_token
+            ? `<a href="invitation.html?token=${encodeURIComponent(r.invite_token)}" target="_blank"
+                title="Buka undangan digital"
+                class="ml-1 text-yellow-800 hover:text-yellow-400 transition">🎟️</a>`
+            : '';
+
         return `<tr>
             <td class="text-gray-600 text-xs">${i + 1}</td>
-            <td class="font-medium text-white">${escHtml(r.nama)}</td>
+            <td class="font-medium text-white">${escHtml(r.nama)}${invLink}</td>
             <td class="text-gray-300">${escHtml(r.komunitas)}</td>
             <td>
                 <a href="https://wa.me/${r.whatsapp}" target="_blank"
@@ -448,6 +572,7 @@ function renderTable() {
                 </a>
             </td>
             <td>${badge}</td>
+            <td>${ciBadge}</td>
             <td class="text-gray-400 text-xs" style="max-width:160px;">${escHtml(r.alasan) || '—'}</td>
             <td class="text-gray-500 text-xs whitespace-nowrap">${ts}</td>
             <td>
@@ -522,20 +647,21 @@ function exportExcel() {
         return;
     }
 
-    const header = ['No.', 'Nama Lengkap', 'Komunitas / Instansi', 'Nomor WhatsApp', 'Status Kehadiran', 'Alasan / Pesan', 'Waktu Daftar'];
+    const header = ['No.', 'Nama Lengkap', 'Komunitas / Instansi', 'Nomor WhatsApp', 'Status RSVP', 'Check-in', 'Alasan / Pesan', 'Waktu Daftar'];
     const rows   = data.map((r, i) => [
         i + 1,
         r.nama,
         r.komunitas,
         r.whatsapp,
         r.status,
+        r.checkin_at ? formatDate(r.checkin_at) : '',
         r.alasan || '',
         r.created_at || ''
     ]);
 
     const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
     // Column widths
-    ws['!cols'] = [{ wch: 5 }, { wch: 28 }, { wch: 28 }, { wch: 18 }, { wch: 16 }, { wch: 35 }, { wch: 22 }];
+    ws['!cols'] = [{ wch: 5 }, { wch: 28 }, { wch: 28 }, { wch: 18 }, { wch: 16 }, { wch: 22 }, { wch: 35 }, { wch: 22 }];
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Daftar Hadir');
@@ -547,6 +673,7 @@ function exportExcel() {
         ['Total RSVP',      allData.length],
         ['Konfirmasi Hadir', allData.filter(r => r.status === 'Hadir').length],
         ['Tidak Hadir',      allData.filter(r => r.status !== 'Hadir').length],
+        ['Sudah Check-in',   allData.filter(r => !!r.checkin_at).length],
         ['Diekspor pada',    new Date().toLocaleString('id-ID')]
     ];
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sum), 'Ringkasan');
@@ -606,6 +733,179 @@ function showToast(title, msg, type = 'error') {
         el.classList.remove('hidden');
     }
 })();
+
+// ================================================================
+//  QR SCANNER
+// ================================================================
+let scanStream   = null;
+let scanInterval = null;
+let scannerBusy  = false;
+
+function openScanner() {
+    document.getElementById('scanModal').classList.add('show');
+    document.getElementById('scanStatus').textContent = 'Meminta akses kamera...';
+    document.getElementById('manualToken').value = '';
+    scannerBusy = false;
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+        document.getElementById('scanStatus').textContent = '⚠️ Browser tidak mendukung kamera. Gunakan input manual.';
+        return;
+    }
+
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+        .then(stream => {
+            scanStream = stream;
+            const video = document.getElementById('scanVideo');
+            video.srcObject = stream;
+            video.play();
+            document.getElementById('scanStatus').textContent = 'Arahkan ke QR Code undangan...';
+            startScanLoop();
+        })
+        .catch(err => {
+            console.warn('Camera error:', err);
+            document.getElementById('scanStatus').textContent = '⚠️ Akses kamera ditolak. Gunakan input manual di bawah.';
+        });
+}
+
+function startScanLoop() {
+    const video  = document.getElementById('scanVideo');
+    const canvas = document.getElementById('scanCanvas');
+    const ctx    = canvas.getContext('2d');
+
+    scanInterval = setInterval(() => {
+        if (scannerBusy || video.readyState !== video.HAVE_ENOUGH_DATA) return;
+        canvas.width  = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+        if (code?.data) {
+            // Extract token from URL or raw token
+            let token = code.data;
+            try {
+                const url = new URL(token);
+                token = url.searchParams.get('token') || token;
+            } catch {}
+            processToken(token);
+        }
+    }, 400);
+}
+
+function closeScanner() {
+    clearInterval(scanInterval);
+    scanInterval = null;
+    if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+    document.getElementById('scanModal').classList.remove('show');
+    document.getElementById('scanVideo').srcObject = null;
+}
+
+async function processToken(token) {
+    if (!token || scannerBusy) return;
+    scannerBusy = true;
+    document.getElementById('scanStatus').textContent = '⏳ Memproses token...';
+
+    try {
+        // Lookup by token
+        const res = await CONFIG.tursoFetch([{
+            type: "execute",
+            stmt: {
+                sql: "SELECT id, nama, komunitas, status, checkin_at FROM attendance WHERE invite_token = ? LIMIT 1",
+                args: [{ type:"text", value: token }]
+            }
+        }]);
+
+        const result = res.results?.[0]?.response?.result;
+        const cols   = result?.cols?.map(c => c.name) ?? [];
+        const rows   = result?.rows ?? [];
+
+        if (rows.length === 0) {
+            document.getElementById('scanStatus').textContent = '❌ Token tidak ditemukan!';
+            showCheckinResult('❌', 'Token Tidak Valid', 'Undangan tidak ditemukan di database.', '', true);
+            setTimeout(() => { scannerBusy = false; document.getElementById('scanStatus').textContent = 'Arahkan ke QR Code undangan...'; }, 3000);
+            return;
+        }
+
+        const obj = {};
+        cols.forEach((c, i) => { obj[c] = rows[0][i]?.value ?? ''; });
+
+        if (obj.checkin_at) {
+            // Already checked in
+            document.getElementById('scanStatus').textContent = '⚠️ Sudah check-in sebelumnya!';
+            showCheckinResult('⚠️', 'Sudah Check-in', obj.nama, obj.komunitas + '\nCheck-in: ' + formatDate(obj.checkin_at), true);
+            closeScanner();
+            return;
+        }
+
+        // Perform check-in
+        const now = new Date().toISOString();
+        await CONFIG.tursoFetch([{
+            type: "execute",
+            stmt: {
+                sql: "UPDATE attendance SET checkin_at = ? WHERE id = ?",
+                args: [{ type:"text", value: now }, { type:"integer", value: String(obj.id) }]
+            }
+        }]);
+
+        // Update local data
+        const local = allData.find(r => r.id == obj.id);
+        if (local) local.checkin_at = now;
+        updateStats();
+        renderTable();
+
+        document.getElementById('scanStatus').textContent = '✅ Check-in berhasil!';
+        showCheckinResult('✅', 'Check-in Berhasil!', obj.nama, obj.komunitas, false, formatDate(now));
+        closeScanner();
+
+    } catch (err) {
+        console.error(err);
+        document.getElementById('scanStatus').textContent = '❌ Error: ' + err.message;
+        setTimeout(() => { scannerBusy = false; }, 2500);
+    }
+}
+
+async function manualCheckin(id, nama) {
+    if (!confirm(`Tandai "${nama}" sebagai hadir (check-in)?`)) return;
+    const now = new Date().toISOString();
+    try {
+        await CONFIG.tursoFetch([{
+            type: "execute",
+            stmt: {
+                sql: "UPDATE attendance SET checkin_at = ? WHERE id = ?",
+                args: [{ type:"text", value: now }, { type:"integer", value: String(id) }]
+            }
+        }]);
+        const local = allData.find(r => r.id == id);
+        if (local) local.checkin_at = now;
+        updateStats();
+        renderTable();
+        showToast('Check-in Berhasil', `${nama} telah ditandai hadir.`, 'success');
+    } catch (err) {
+        showToast('Error', 'Gagal check-in: ' + err.message, 'error');
+    }
+}
+
+function showCheckinResult(icon, title, nama, sub, isWarn = false, time = '') {
+    document.getElementById('checkinResultIcon').textContent  = icon;
+    document.getElementById('checkinResultTitle').textContent = title;
+    document.getElementById('checkinResultTitle').style.color = isWarn ? '#f87171' : '#4ade80';
+    document.getElementById('checkinResultNama').textContent  = nama;
+    document.getElementById('checkinResultKomunitas').textContent = sub;
+    document.getElementById('checkinResultTime').textContent  = time ? '🕐 Check-in: ' + time : '';
+    document.getElementById('checkinModal').classList.add('show');
+}
+
+function closeCheckinModal() {
+    document.getElementById('checkinModal').classList.remove('show');
+    scannerBusy = false;
+}
+
+// Close modals on backdrop click
+document.getElementById('scanModal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('scanModal')) closeScanner();
+});
+document.getElementById('checkinModal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('checkinModal')) closeCheckinModal();
+});
 </script>
 </body>
 </html>

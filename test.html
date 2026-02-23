@@ -193,6 +193,30 @@ async function runTest(type) {
                 }
             }]);
             log('✅ INSERT berhasil! Data tersimpan ke Turso.', 'ok');
+
+            // Kirim notifikasi WhatsApp
+            log(`Mengirim WA notifikasi ke ${d.wa}...`, 'dim');
+            try {
+                const waMsg = CONFIG.buildWAMessage(d.nama, d.komunitas, d.status);
+                log(`Pesan WA: ${waMsg.slice(0,80)}...`, 'dim');
+                const waRes = await fetch(CONFIG.WA_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Basic ' + btoa(`${CONFIG.WA_USER}:${CONFIG.WA_PASS}`),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ phone: d.wa, message: waMsg })
+                });
+                const waBody = await waRes.text();
+                log(`← WA HTTP ${waRes.status}: ${waBody.slice(0,120)}`, waRes.ok ? 'ok' : 'err');
+                if (waRes.ok) {
+                    log('✅ Notifikasi WhatsApp berhasil dikirim!', 'ok');
+                } else {
+                    log(`⚠️ WA gagal (non-fatal): HTTP ${waRes.status}`, 'inf');
+                }
+            } catch(waErr) {
+                log(`⚠️ WA error (non-fatal): ${waErr.message}`, 'inf');
+            }
         }
 
         if (type === 'select' || type === 'all') {

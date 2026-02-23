@@ -294,7 +294,19 @@
                 </div>
                 <h2 class="text-xl font-bold gold-text" style="font-family:'Cinzel',serif;">Berhasil!</h2>
                 <p class="text-sm text-white" id="modalMsg">Konfirmasi kehadiran Anda telah kami terima.</p>
-                <p class="text-xs text-white">Pesan konfirmasi telah dikirim ke WhatsApp Anda.</p>
+                <p class="text-xs text-white">Pesan konfirmasi + link undangan digital telah dikirim ke WhatsApp Anda.</p>
+
+                <!-- Invitation link shortcut -->
+                <div id="modalInviteWrap" class="hidden rounded-xl p-3 text-left space-y-2" style="background:rgba(191,149,63,0.06);border:1px solid rgba(191,149,63,0.2);">
+                    <p class="text-xs text-yellow-600 font-semibold uppercase tracking-wide">🎟️ Undangan Digital Anda</p>
+                    <p class="text-xs text-gray-400 break-all" id="modalInviteURL"></p>
+                    <a id="modalOpenInvite" href="#" target="_blank"
+                        class="block text-center py-2 rounded-lg text-xs font-semibold text-black" 
+                        style="background:linear-gradient(90deg,#BF953F,#FCF6BA,#B38728)">
+                        Buka Undangan Digital →
+                    </a>
+                </div>
+
                 <button id="modalClose" class="btn-gold w-full py-3 rounded-lg text-sm uppercase tracking-wider mt-2">
                     Tutup
                 </button>
@@ -336,10 +348,19 @@
         setTimeout(() => t.classList.remove('show'), 4000);
     }
 
-    function showModal(nama, status) {
+    function showModal(nama, status, inviteURL) {
         const icon = status === 'Hadir' ? '✅' : '📋';
         document.getElementById('modalMsg').textContent =
             `${icon} ${nama}, konfirmasi kehadiran (${status}) Anda telah kami terima!`;
+
+        const invWrap = document.getElementById('modalInviteWrap');
+        if (status === 'Hadir' && inviteURL) {
+            document.getElementById('modalInviteURL').textContent = inviteURL;
+            document.getElementById('modalOpenInvite').href = inviteURL;
+            invWrap.classList.remove('hidden');
+        } else {
+            invWrap.classList.add('hidden');
+        }
         document.getElementById('successModal').classList.add('show');
     }
 
@@ -431,16 +452,30 @@
                 return;
             }
 
-            // 2. Simpan ke Turso
+            // 2. Generate invite token (unique per person)
+            const token = CONFIG.generateToken();
+
+            // 3. Simpan ke Turso
             await CONFIG.tursoFetch([{
                 type: "execute",
                 stmt: {
-                    sql: "INSERT INTO attendance (nama, komunitas, whatsapp, status, alasan) VALUES (?, ?, ?, ?, ?)",
-                    args: [{type:"text",value:nama},{type:"text",value:komunitas},{type:"text",value:waRaw},{type:"text",value:status},{type:"text",value:alasan}]
+                    sql: "INSERT INTO attendance (nama, komunitas, whatsapp, status, alasan, invite_token) VALUES (?, ?, ?, ?, ?, ?)",
+                    args: [
+                        {type:"text",value:nama},
+                        {type:"text",value:komunitas},
+                        {type:"text",value:waRaw},
+                        {type:"text",value:status},
+                        {type:"text",value:alasan},
+                        {type:"text",value:token}
+                    ]
                 }
             }]);
 
-            // 3. Kirim notifikasi WhatsApp
+            // 4. Build invitation URL
+            const base = `${location.origin}${location.pathname.replace(/\/[^/]*$/, '')}`;
+            const inviteURL = `${base}/invitation.html?token=${token}`;
+
+            // 5. Kirim notifikasi WhatsApp
             try {
                 await fetch(CONFIG.WA_API_URL, {
                     method: 'POST',
@@ -450,15 +485,15 @@
                     },
                     body: JSON.stringify({
                         phone: waRaw,
-                        message: CONFIG.buildWAMessage(nama, komunitas, status)
+                        message: CONFIG.buildWAMessage(nama, komunitas, status, status === 'Hadir' ? inviteURL : '')
                     })
                 });
             } catch (waErr) {
                 console.warn('WA notif gagal (non-fatal):', waErr);
             }
 
-            // 4. Success UI
-            showModal(nama, status);
+            // 6. Success UI
+            showModal(nama, status, status === 'Hadir' ? inviteURL : '');
             document.getElementById('rsvpForm').reset();
             document.getElementById('charCount').textContent = '0';
             ['nama','komunitas','whatsapp'].forEach(id => document.getElementById(id).classList.remove('valid','error'));
