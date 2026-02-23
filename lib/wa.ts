@@ -1,12 +1,12 @@
 /** Server-side WA sender – runs in API Route, no CORS issue */
 export async function sendWA(phone: string, message: string): Promise<void> {
-  const waUrl = process.env.WA_API_URL;
-  const user = process.env.WA_USER;
-  const pass = process.env.WA_PASS;
+  const waUrl = process.env.WA_API_URL ?? "";
+  const user  = process.env.WA_USER   ?? "";
+  const pass  = process.env.WA_PASS   ?? "";
 
   if (!waUrl || !user || !pass) {
     throw new Error(
-      "WA_API_URL / WA_USER / WA_PASS belum diisi di .env.local"
+      "WA_API_URL / WA_USER / WA_PASS belum diisi di .env.local (atau Vercel ENV VARS)"
     );
   }
 
