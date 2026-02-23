@@ -76,6 +76,7 @@
             <button class="btn btn-blue"  onclick="runTest('select')">5. SELECT Semua</button>
             <button class="btn btn-red"   onclick="runTest('deleteLast')">6. Hapus Data Terakhir</button>
             <button class="btn btn-gold"  onclick="runTest('all')">▶ Jalankan Semua (1–5)</button>
+            <button class="btn" style="background:#25D366;color:#fff;" onclick="runTest('sendWA')">7. Test Kirim WA</button>
         </div>
         <button class="btn btn-red text-xs" onclick="clearLog()">🗑 Clear Log</button>
     </div>
@@ -152,13 +153,16 @@ async function runTest(type) {
         if (type === 'createTable' || type === 'all') {
             log('Membuat tabel attendance (jika belum ada)...', 'dim');
             await rawFetch([{ type:'execute', stmt:{ sql:`CREATE TABLE IF NOT EXISTS attendance (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                nama TEXT NOT NULL,
-                komunitas TEXT NOT NULL,
-                whatsapp TEXT NOT NULL,
-                status TEXT NOT NULL DEFAULT 'Hadir',
-                alasan TEXT,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                id           INTEGER  PRIMARY KEY AUTOINCREMENT,
+                nama         TEXT     NOT NULL,
+                komunitas    TEXT     NOT NULL,
+                whatsapp     TEXT     NOT NULL,
+                status       TEXT     NOT NULL DEFAULT 'Hadir',
+                alasan       TEXT,
+                invite_token TEXT     UNIQUE,
+                checkin_at   DATETIME,
+                wa_sent      INTEGER  DEFAULT 0,
+                created_at   DATETIME DEFAULT CURRENT_TIMESTAMP
             )` }}]);
             log('✅ Tabel OK!', 'ok');
         }
@@ -179,43 +183,47 @@ async function runTest(type) {
 
         if (type === 'insert' || type === 'all') {
             log(`INSERT: ${d.nama} | ${d.komunitas} | ${d.wa} | ${d.status}`, 'dim');
+            const testToken = CONFIG.generateToken();
             await rawFetch([{
                 type:'execute',
                 stmt:{
-                    sql:'INSERT INTO attendance (nama, komunitas, whatsapp, status, alasan) VALUES (?, ?, ?, ?, ?)',
+                    sql:'INSERT INTO attendance (nama, komunitas, whatsapp, status, alasan, invite_token) VALUES (?, ?, ?, ?, ?, ?)',
                     args:[
                         {type:'text',value:d.nama},
                         {type:'text',value:d.komunitas},
                         {type:'text',value:d.wa},
                         {type:'text',value:d.status},
-                        {type:'text',value:d.alasan}
+                        {type:'text',value:d.alasan},
+                        {type:'text',value:testToken}
                     ]
                 }
             }]);
             log('✅ INSERT berhasil! Data tersimpan ke Turso.', 'ok');
+            log(`Token: ${testToken.slice(0,24)}...`, 'dim');
+            log(`💡 Gunakan tombol "7. Test Kirim WA" untuk test pengiriman WA.`, 'inf');
+        }
 
-            // Kirim notifikasi WhatsApp
-            log(`Mengirim WA notifikasi ke ${d.wa}...`, 'dim');
-            try {
-                const waMsg = CONFIG.buildWAMessage(d.nama, d.komunitas, d.status);
-                log(`Pesan WA: ${waMsg.slice(0,80)}...`, 'dim');
-                const waRes = await fetch(CONFIG.WA_API_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': 'Basic ' + btoa(`${CONFIG.WA_USER}:${CONFIG.WA_PASS}`),
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ phone: d.wa, message: waMsg })
-                });
-                const waBody = await waRes.text();
-                log(`← WA HTTP ${waRes.status}: ${waBody.slice(0,120)}`, waRes.ok ? 'ok' : 'err');
-                if (waRes.ok) {
-                    log('✅ Notifikasi WhatsApp berhasil dikirim!', 'ok');
-                } else {
-                    log(`⚠️ WA gagal (non-fatal): HTTP ${waRes.status}`, 'inf');
-                }
-            } catch(waErr) {
-                log(`⚠️ WA error (non-fatal): ${waErr.message}`, 'inf');
+        if (type === 'sendWA') {
+            log(`Mengirim WA ke ${d.wa}...`, 'dim');
+            const inviteURL = `${location.origin}${location.pathname.replace(/\/[^/]*$/, '')}/invitation.html?token=TEST-TOKEN`;
+            const msg = CONFIG.buildWAMessage(d.nama, d.komunitas, d.status, d.status === 'Hadir' ? inviteURL : '');
+            log(`Pesan (preview):`, 'dim');
+            log(msg.replace(/\n/g, ' | ').slice(0, 200) + '...', 'dim');
+            const waRes = await fetch(CONFIG.WA_API_URL, {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Basic ' + btoa(`${CONFIG.WA_USER}:${CONFIG.WA_PASS}`),
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ phone: d.wa, message: msg })
+            });
+            const waBody = await waRes.text();
+            rawEl.textContent = waBody;
+            log(`← WA HTTP ${waRes.status}: ${waBody.slice(0, 150)}`, waRes.ok ? 'ok' : 'err');
+            if (waRes.ok) {
+                log('✅ WA berhasil dikirim!', 'ok');
+            } else {
+                log(`❌ WA gagal: HTTP ${waRes.status}`, 'err');
             }
         }
 

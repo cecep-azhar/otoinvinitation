@@ -44,11 +44,13 @@
   alasan       TEXT,
   invite_token TEXT     UNIQUE,
   checkin_at   DATETIME,
+  wa_sent      INTEGER  DEFAULT 0,
   created_at   DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 -- Kolom migrasi (aman jika kolom sudah ada):
 ALTER TABLE attendance ADD COLUMN invite_token TEXT UNIQUE;
-ALTER TABLE attendance ADD COLUMN checkin_at   DATETIME;</pre>
+ALTER TABLE attendance ADD COLUMN checkin_at   DATETIME;
+ALTER TABLE attendance ADD COLUMN wa_sent      INTEGER DEFAULT 0;</pre>
             </div>
 
             <button id="initBtn" onclick="initDB()" class="btn-gold w-full py-3 rounded-lg text-sm uppercase tracking-widest">
@@ -89,6 +91,7 @@ ALTER TABLE attendance ADD COLUMN checkin_at   DATETIME;</pre>
                             alasan       TEXT,
                             invite_token TEXT     UNIQUE,
                             checkin_at   DATETIME,
+                            wa_sent      INTEGER  DEFAULT 0,
                             created_at   DATETIME DEFAULT CURRENT_TIMESTAMP
                           )`
                 }
@@ -99,7 +102,8 @@ ALTER TABLE attendance ADD COLUMN checkin_at   DATETIME;</pre>
             log('▶ Migrasi kolom (invite_token, checkin_at)...');
             for (const sql of [
                 "ALTER TABLE attendance ADD COLUMN invite_token TEXT",
-                "ALTER TABLE attendance ADD COLUMN checkin_at DATETIME"
+                "ALTER TABLE attendance ADD COLUMN checkin_at DATETIME",
+                "ALTER TABLE attendance ADD COLUMN wa_sent INTEGER DEFAULT 0"
             ]) {
                 try {
                     await CONFIG.tursoFetch([{ type:"execute", stmt:{ sql } }]);

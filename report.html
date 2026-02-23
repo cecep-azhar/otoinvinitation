@@ -104,6 +104,8 @@
 
         /* Badge check-in */
         .badge-checkin { background: rgba(251,191,36,0.15); color: #fbbf24; border: 1px solid rgba(251,191,36,0.35); border-radius: 9999px; padding: 2px 10px; font-size: 0.7rem; font-weight: 600; white-space: nowrap; }
+        /* Badge WA sent */
+        .badge-wa-sent { background: rgba(34,197,94,0.12); color: #86efac; border: 1px solid rgba(34,197,94,0.3); border-radius: 9999px; padding: 2px 10px; font-size: 0.7rem; font-weight: 600; white-space: nowrap; }
 
         @media (max-width:640px) { th, td { padding: 0.5rem 0.6rem; } }
     </style>
@@ -248,6 +250,7 @@
                             <th onclick="sortBy('whatsapp')">WhatsApp</th>
                             <th onclick="sortBy('status')">RSVP</th>
                             <th onclick="sortBy('checkin_at')">Check-in</th>
+                            <th onclick="sortBy('wa_sent')">WA</th>
                             <th>Alasan / Pesan</th>
                             <th onclick="sortBy('created_at')">Waktu Daftar</th>
                             <th style="width:40px"></th>
@@ -415,7 +418,7 @@ async function loadData() {
     try {
         const res = await CONFIG.tursoFetch([{
             type: "execute",
-            stmt: { sql: "SELECT id, nama, komunitas, whatsapp, status, alasan, invite_token, checkin_at, created_at FROM attendance ORDER BY id DESC" }
+            stmt: { sql: "SELECT id, nama, komunitas, whatsapp, status, alasan, invite_token, checkin_at, wa_sent, created_at FROM attendance ORDER BY id DESC" }
         }]);
 
         const result = res.results?.[0]?.response?.result;
@@ -554,6 +557,14 @@ function renderTable() {
 
         const ts = r.created_at ? formatDate(r.created_at) : '—';
 
+        // WA sent badge
+        const waBadge = r.wa_sent == 1
+            ? `<span class="badge-wa-sent" title="Pesan WA berhasil dikirim">✅ Terkirim</span>`
+            : `<button onclick="resendWA(${r.id},'${escHtml(r.nama)}','${r.whatsapp}','${escHtml(r.komunitas)}','${r.status}','${encodeURIComponent(r.invite_token || '')}')" 
+                class="text-xs px-2 py-1 rounded border border-green-800/50 text-green-700 hover:bg-green-900/20 transition whitespace-nowrap">
+                📤 Kirim WA
+              </button>`;
+
         // Invite link shortcut
         const invLink = r.invite_token
             ? `<a href="invitation.html?token=${encodeURIComponent(r.invite_token)}" target="_blank"
@@ -573,6 +584,7 @@ function renderTable() {
             </td>
             <td>${badge}</td>
             <td>${ciBadge}</td>
+            <td>${waBadge}</td>
             <td class="text-gray-400 text-xs" style="max-width:160px;">${escHtml(r.alasan) || '—'}</td>
             <td class="text-gray-500 text-xs whitespace-nowrap">${ts}</td>
             <td>
@@ -860,6 +872,39 @@ async function processToken(token) {
         console.error(err);
         document.getElementById('scanStatus').textContent = '❌ Error: ' + err.message;
         setTimeout(() => { scannerBusy = false; }, 2500);
+    }
+}
+
+// ================================================================
+//  RESEND WA
+// ================================================================
+async function resendWA(id, nama, whatsapp, komunitas, status, tokenEncoded) {
+    if (!confirm(`Kirim ulang pesan WhatsApp ke ${nama} (${whatsapp})?`)) return;
+    const token = decodeURIComponent(tokenEncoded);
+    const base  = `${location.origin}${location.pathname.replace(/\/[^/]*$/, '')}`;
+    const inviteURL = token ? `${base}/invitation.html?token=${token}` : '';
+    const msg = CONFIG.buildWAMessage(nama, komunitas, status, inviteURL);
+    try {
+        const res = await fetch(CONFIG.WA_API_URL, {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Basic ' + btoa(`${CONFIG.WA_USER}:${CONFIG.WA_PASS}`),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ phone: whatsapp, message: msg })
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        // Update wa_sent flag
+        await CONFIG.tursoFetch([{
+            type: 'execute',
+            stmt: { sql: 'UPDATE attendance SET wa_sent = 1 WHERE id = ?', args: [{type:'integer',value:String(id)}] }
+        }]);
+        const local = allData.find(r => r.id == id);
+        if (local) local.wa_sent = 1;
+        renderTable();
+        showToast('WA Terkirim', `Pesan berhasil dikirim ke ${nama}.`, 'success');
+    } catch (err) {
+        showToast('Gagal Kirim WA', err.message, 'error');
     }
 }
 
