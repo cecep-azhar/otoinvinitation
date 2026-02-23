@@ -89,7 +89,7 @@ Kami mencatat bahwa Anda *tidak dapat hadir* pada acara:
 
 Semoga di lain kesempatan kita bisa bertemu. Jika ada perubahan rencana, tidak ada salahnya hadir mendadak — kami selalu senang! 😄
 
-Salam,
+Salam, Hana by
 *${e.contact}*`
         );
     }
