@@ -472,6 +472,8 @@
                 showToast('Gunakan HTTP Server', 'Buka via Live Server (VS Code) atau deploy ke hosting. Jangan buka file:// langsung.', 'error');
             } else if (err.message.includes('400')) {
                 showToast('Token Tidak Valid', 'TURSO_TOKEN Anda salah atau expired. Cek kembali di Turso dashboard.', 'error');
+            } else if (err.message.includes('DB_ERROR') || err.message.includes('no such table')) {
+                showToast('Tabel Belum Dibuat', 'Buka init-db.html terlebih dahulu untuk membuat tabel database.', 'error');
             } else {
                 showToast('Terjadi Kesalahan', err.message || 'Coba lagi nanti.', 'error');
             }

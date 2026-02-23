@@ -57,5 +57,12 @@ CONFIG.tursoFetch = async (requests) => {
         try { errBody = await res.text(); } catch {}
         throw new Error(`HTTP ${res.status}: ${errBody.slice(0, 200)}`);
     }
-    return res.json();
+    const json = await res.json();
+    // Turso kadang return HTTP 200 tapi body berisi error (misal tabel tidak ada)
+    for (const result of json.results ?? []) {
+        if (result.type === 'error') {
+            throw new Error(`DB_ERROR: ${result.error?.message ?? JSON.stringify(result.error)}`);
+        }
+    }
+    return json;
 };

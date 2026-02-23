@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TEST SUBMIT – BASNOM HIPMI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="js/config.js"></script>
+    <style>
+        body { font-family: monospace; background: #0a0a0a; color: #e5e7eb; }
+        .log { background: #050505; border: 1px solid #222; border-radius: 8px; padding: 1rem; font-size: 0.78rem; line-height: 1.8; height: 320px; overflow-y: auto; }
+        .log .ok  { color: #4ade80; }
+        .log .err { color: #f87171; }
+        .log .inf { color: #facc15; }
+        .log .dim { color: #555; }
+        .btn { cursor: pointer; font-weight: 700; border-radius: 8px; padding: 0.6rem 1.4rem; font-size: 0.8rem; transition: filter 0.2s; }
+        .btn:hover { filter: brightness(1.15); }
+        .btn-gold  { background: linear-gradient(90deg,#BF953F,#FCF6BA,#B38728); color:#000; }
+        .btn-green { background: #15803d; color: #fff; }
+        .btn-red   { background: #991b1b; color: #fff; }
+        .btn-blue  { background: #1d4ed8; color: #fff; }
+        input, textarea, select { background: #111; border: 1px solid #333; color: #fff; border-radius: 6px; padding: 0.5rem 0.75rem; width: 100%; font-size: 0.85rem; }
+        label { font-size: 0.7rem; color: #facc15; font-weight: 700; text-transform: uppercase; display: block; margin-bottom: 4px; }
+        .card { background: #111; border: 1px solid rgba(191,149,63,0.2); border-radius: 12px; padding: 1.5rem; }
+    </style>
+</head>
+<body class="min-h-screen p-6">
+
+<div class="max-w-2xl mx-auto space-y-5">
+
+    <!-- Header -->
+    <div class="text-center">
+        <h1 class="text-xl font-bold" style="color:#FCF6BA;">🧪 HALAMAN TEST SUBMIT</h1>
+        <p class="text-xs text-gray-500 mt-1">Data sudah diisi otomatis. Langsung klik tombol test yang diinginkan.</p>
+    </div>
+
+    <!-- Form Data -->
+    <div class="card space-y-4">
+        <p class="text-xs text-yellow-600 font-bold uppercase tracking-widest">Data Uji</p>
+
+        <div class="grid grid-cols-2 gap-3">
+            <div>
+                <label>Nama Lengkap</label>
+                <input id="t_nama" value="Cecep Saeful Azhar Hidayat, ST">
+            </div>
+            <div>
+                <label>Komunitas / Instansi</label>
+                <input id="t_komunitas" value="HIPMI OTOMOTIF JAWA BARAT">
+            </div>
+            <div>
+                <label>Nomor WhatsApp</label>
+                <input id="t_wa" value="6285220696117">
+            </div>
+            <div>
+                <label>Status</label>
+                <select id="t_status">
+                    <option value="Hadir">✅ Hadir</option>
+                    <option value="Tidak Hadir">❌ Tidak Hadir</option>
+                </select>
+            </div>
+        </div>
+        <div>
+            <label>Alasan / Pesan</label>
+            <textarea id="t_alasan" rows="2">InsyaAllah Hadir Donk</textarea>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="card space-y-3">
+        <p class="text-xs text-yellow-600 font-bold uppercase tracking-widest">Pilih Test</p>
+        <div class="flex flex-wrap gap-2">
+            <button class="btn btn-blue"  onclick="runTest('ping')">1. Ping DB</button>
+            <button class="btn btn-blue"  onclick="runTest('createTable')">2. Buat Tabel</button>
+            <button class="btn btn-blue"  onclick="runTest('checkDup')">3. Cek Duplikat WA</button>
+            <button class="btn btn-green" onclick="runTest('insert')">4. INSERT Data</button>
+            <button class="btn btn-blue"  onclick="runTest('select')">5. SELECT Semua</button>
+            <button class="btn btn-red"   onclick="runTest('deleteLast')">6. Hapus Data Terakhir</button>
+            <button class="btn btn-gold"  onclick="runTest('all')">▶ Jalankan Semua (1–5)</button>
+        </div>
+        <button class="btn btn-red text-xs" onclick="clearLog()">🗑 Clear Log</button>
+    </div>
+
+    <!-- Log -->
+    <div class="card">
+        <p class="text-xs text-yellow-600 font-bold uppercase tracking-widest mb-3">Log Output</p>
+        <div id="log" class="log"><span class="dim">Siap. Pilih test di atas...</span></div>
+    </div>
+
+    <!-- Raw Response -->
+    <div class="card">
+        <p class="text-xs text-yellow-600 font-bold uppercase tracking-widest mb-3">Raw Response Terakhir</p>
+        <pre id="raw" style="background:#050505;border:1px solid #222;border-radius:8px;padding:1rem;font-size:0.7rem;color:#aaa;overflow-x:auto;max-height:250px;white-space:pre-wrap;">—</pre>
+    </div>
+</div>
+
+<script>
+const logEl = document.getElementById('log');
+const rawEl = document.getElementById('raw');
+
+function log(msg, type='dim') {
+    const ts = new Date().toLocaleTimeString('id-ID');
+    logEl.innerHTML += `\n<span class="${type}">[${ts}] ${msg}</span>`;
+    logEl.scrollTop = logEl.scrollHeight;
+}
+function clearLog() { logEl.innerHTML = '<span class="dim">Log cleared.</span>'; rawEl.textContent = '—'; }
+
+function getData() {
+    return {
+        nama:      document.getElementById('t_nama').value.trim(),
+        komunitas: document.getElementById('t_komunitas').value.trim(),
+        wa:        document.getElementById('t_wa').value.trim().replace(/\D/g,''),
+        status:    document.getElementById('t_status').value,
+        alasan:    document.getElementById('t_alasan').value.trim()
+    };
+}
+
+async function rawFetch(requests) {
+    const url = `${CONFIG.TURSO_URL}/v2/pipeline`;
+    log(`→ POST ${url}`, 'inf');
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${CONFIG.TURSO_TOKEN}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ requests })
+    });
+    log(`← HTTP ${res.status} ${res.statusText}`, res.ok ? 'ok' : 'err');
+    const text = await res.text();
+    let json;
+    try { json = JSON.parse(text); } catch { json = text; }
+    rawEl.textContent = typeof json === 'string' ? json : JSON.stringify(json, null, 2);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    // Cek error di dalam body
+    for (const r of json?.results ?? []) {
+        if (r.type === 'error') throw new Error(`DB: ${r.error?.message}`);
+    }
+    return json;
+}
+
+async function runTest(type) {
+    const d = getData();
+    log(`\n=== TEST: ${type.toUpperCase()} ===`, 'inf');
+
+    try {
+        if (type === 'ping' || type === 'all') {
+            log('Ping database...', 'dim');
+            await rawFetch([{ type:'execute', stmt:{ sql:'SELECT 1 as ping' } }]);
+            log('✅ DB connected!', 'ok');
+        }
+
+        if (type === 'createTable' || type === 'all') {
+            log('Membuat tabel attendance (jika belum ada)...', 'dim');
+            await rawFetch([{ type:'execute', stmt:{ sql:`CREATE TABLE IF NOT EXISTS attendance (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nama TEXT NOT NULL,
+                komunitas TEXT NOT NULL,
+                whatsapp TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'Hadir',
+                alasan TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )` }}]);
+            log('✅ Tabel OK!', 'ok');
+        }
+
+        if (type === 'checkDup' || type === 'all') {
+            log(`Cek duplikat WA: ${d.wa}`, 'dim');
+            const res = await rawFetch([{
+                type:'execute',
+                stmt:{ sql:'SELECT id FROM attendance WHERE whatsapp = ? LIMIT 1', args:[{type:'text',value:d.wa}] }
+            }]);
+            const rows = res.results?.[0]?.response?.result?.rows ?? [];
+            if (rows.length > 0) {
+                log(`⚠️ WA sudah terdaftar (id=${rows[0][0]?.value})`, 'inf');
+            } else {
+                log('✅ WA belum terdaftar, boleh insert', 'ok');
+            }
+        }
+
+        if (type === 'insert' || type === 'all') {
+            log(`INSERT: ${d.nama} | ${d.komunitas} | ${d.wa} | ${d.status}`, 'dim');
+            await rawFetch([{
+                type:'execute',
+                stmt:{
+                    sql:'INSERT INTO attendance (nama, komunitas, whatsapp, status, alasan) VALUES (?, ?, ?, ?, ?)',
+                    args:[
+                        {type:'text',value:d.nama},
+                        {type:'text',value:d.komunitas},
+                        {type:'text',value:d.wa},
+                        {type:'text',value:d.status},
+                        {type:'text',value:d.alasan}
+                    ]
+                }
+            }]);
+            log('✅ INSERT berhasil! Data tersimpan ke Turso.', 'ok');
+        }
+
+        if (type === 'select' || type === 'all') {
+            log('SELECT semua data...', 'dim');
+            const res = await rawFetch([{
+                type:'execute',
+                stmt:{ sql:'SELECT id, nama, whatsapp, status FROM attendance ORDER BY id DESC LIMIT 10' }
+            }]);
+            const rows = res.results?.[0]?.response?.result?.rows ?? [];
+            log(`✅ Ditemukan ${rows.length} baris (max 10):`, 'ok');
+            rows.forEach(r => {
+                log(`  #${r[0]?.value} | ${r[1]?.value} | ${r[2]?.value} | ${r[3]?.value}`, 'ok');
+            });
+        }
+
+        if (type === 'deleteLast') {
+            log('Ambil ID terakhir...', 'dim');
+            const res = await rawFetch([{
+                type:'execute',
+                stmt:{ sql:'SELECT id FROM attendance ORDER BY id DESC LIMIT 1' }
+            }]);
+            const rows = res.results?.[0]?.response?.result?.rows ?? [];
+            if (rows.length === 0) { log('⚠️ Tidak ada data untuk dihapus.', 'inf'); return; }
+            const lastId = rows[0][0]?.value;
+            log(`Hapus id=${lastId}...`, 'dim');
+            await rawFetch([{
+                type:'execute',
+                stmt:{ sql:'DELETE FROM attendance WHERE id = ?', args:[{type:'integer',value:String(lastId)}] }
+            }]);
+            log(`✅ Baris id=${lastId} berhasil dihapus.`, 'ok');
+        }
+
+        if (type === 'all') log('\n🎉 SEMUA TEST LULUS!', 'ok');
+
+    } catch(err) {
+        log(`❌ ERROR: ${err.message}`, 'err');
+        console.error(err);
+    }
+}
+</script>
+</body>
+</html>
