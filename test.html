@@ -207,26 +207,15 @@ async function runTest(type) {
             log(`Mengirim WA ke ${d.wa}...`, 'dim');
             const inviteURL = `${location.origin}${location.pathname.replace(/\/[^/]*$/, '')}/invitation.html?token=TEST-TOKEN`;
             const msg = CONFIG.buildWAMessage(d.nama, d.komunitas, d.status, d.status === 'Hadir' ? inviteURL : '');
-            log(`Pesan (200 char pertama):`, 'dim');
-            log(msg.replace(/\n/g, ' | ').slice(0, 200) + '...', 'dim');
+            log(`Pesan (200 char pertama): ${msg.replace(/\n/g, ' | ').slice(0, 200)}...`, 'dim');
             log(`→ POST ${CONFIG.WA_API_URL}`, 'inf');
             try {
-                const waRes = await fetch(CONFIG.WA_API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ phone: d.wa, message: msg })
-                });
-                const waBody = await waRes.text();
-                rawEl.textContent = waBody;
-                log(`← HTTP ${waRes.status} ${waRes.statusText}: ${waBody.slice(0, 200)}`, waRes.ok ? 'ok' : 'err');
-                if (waRes.ok) {
-                    log('✅ WA berhasil dikirim! Cek HP Anda.', 'ok');
-                } else {
-                    log(`❌ WA gagal HTTP ${waRes.status} — cek WA_USER/WA_PASS di wa-proxy-worker.js`, 'err');
-                }
-            } catch (e) {
-                log(`❌ Network error: ${e.message}`, 'err');
-                rawEl.textContent = e.message;
+                await CONFIG.sendWA(d.wa, msg);
+                log('✅ WA berhasil dikirim! Cek HP Anda.', 'ok');
+                rawEl.textContent = 'SUCCESS – pesan terkirim ke ' + d.wa;
+            } catch (waErr) {
+                log(`❌ WA gagal: ${waErr.message}`, 'err');
+                rawEl.textContent = waErr.message;
             }
         }
 

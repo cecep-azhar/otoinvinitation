@@ -8,7 +8,9 @@ const CONFIG = {
     TURSO_TOKEN: "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3NzE4MDIwOTgsImlkIjoiYzlkYzM3NjYtOTNmYi00ZDcyLWFmNzktMzg5Y2Y4NWU5Yzc5IiwicmlkIjoiZjI5YmMyYmItOTNlMS00NGFiLWI2MjMtNDEzYzQzNTRkMzRiIn0.X6kNwDtYuHH1jjSUkFvG2z4fE3Bh9e2Yb_hZvdjcDF2VyHrtQeWMW5CpvUrCxZ-0mqg398ZvQV7pchTDUlpQDA", // << PASTE FULL TOKEN DI SINI
 
     // === WA Gateway ===
-    WA_API_URL: "https://wa-proxy.GANTI-INI.workers.dev",  // << Ganti dengan URL Cloudflare Worker Anda
+    // Pilihan 1: Langsung ke WA API (perlu CORS header dari server, atau pakai Cloudflare Worker)
+    // Pilihan 2: Isi URL Cloudflare Worker setelah deploy wa-proxy-worker.js
+    WA_API_URL: "https://wa.fath.my.id/send/message",  // << URL WA Gateway langsung
     WA_USER: "cecep",
     WA_PASS: "126126",
 
@@ -91,25 +93,61 @@ Salam,
     }
 };
 
-// Helper: Kirim WA melalui Cloudflare Worker proxy
-// Worker menangani Basic Auth server-side, sehingga tidak ada CORS issue.
-// Return: true jika HTTP 2xx, false jika gagal.
+// Helper: Kirim WA melalui Cloudflare Worker proxy (atau langsung ke WA API jika CORS ok).
+// Melempar Error dengan pesan detail jika gagal, return true jika berhasil.
 CONFIG.sendWA = async (phone, message) => {
+    // Guard: WA_API_URL belum diisi
+    if (!CONFIG.WA_API_URL || CONFIG.WA_API_URL.includes('GANTI-INI')) {
+        throw new Error('WA_API_URL belum diisi di js/config.js');
+    }
+
+    // Tentukan header: jika URL adalah WA gateway langsung (bukan Cloudflare Worker),
+    // sertakan Basic Auth. Jika melalui Worker, Worker yang menambahkan auth.
+    const isDirectAPI = CONFIG.WA_API_URL.includes('wa.fath.my.id') ||
+                        !CONFIG.WA_API_URL.includes('workers.dev');
+    const headers = { 'Content-Type': 'application/json' };
+    if (isDirectAPI && CONFIG.WA_USER && CONFIG.WA_PASS) {
+        headers['Authorization'] = 'Basic ' + btoa(CONFIG.WA_USER + ':' + CONFIG.WA_PASS);
+    }
+
     try {
+        const controller = new AbortController();
+        const timeoutId  = setTimeout(() => controller.abort(), 15000); // 15s timeout
         const res = await fetch(CONFIG.WA_API_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone, message })
+            headers,
+            body: JSON.stringify({ phone, message }),
+            signal: controller.signal
         });
+        clearTimeout(timeoutId);
+
+        const body = await res.text().catch(() => '');
         if (!res.ok) {
-            const body = await res.text().catch(() => '');
+            let detail = '';
+            try { detail = JSON.parse(body)?.message || body; } catch { detail = body; }
             console.warn(`WA HTTP ${res.status}:`, body);
-            return false;
+            throw new Error(`WA HTTP ${res.status}: ${detail.slice(0, 120)}`);
         }
+        console.log('WA sent OK:', body.slice(0, 80));
         return true;
     } catch (e) {
-        console.warn('WA send error:', e);
-        return false;
+        if (e.name === 'AbortError') {
+            throw new Error('WA timeout: server tidak merespons dalam 15 detik');
+        }
+        // TypeError "Failed to fetch" biasanya = CORS block atau server offline
+        if (e instanceof TypeError && e.message.toLowerCase().includes('fetch')) {
+            const isCF = CONFIG.WA_API_URL.includes('workers.dev');
+            if (!isCF) {
+                throw new Error(
+                    'Gagal koneksi ke WA server (kemungkinan CORS block). ' +
+                    'Solusi: deploy wa-proxy-worker.js ke Cloudflare Workers, ' +
+                    'lalu ganti WA_API_URL di js/config.js dengan URL Worker tersebut.'
+                );
+            }
+            throw new Error('Gagal koneksi ke Cloudflare Worker. Pastikan Worker sudah ter-deploy dan URL-nya benar.');
+        }
+        // Re-throw agar caller bisa tampilkan pesan ke user
+        throw e;
     }
 };
 

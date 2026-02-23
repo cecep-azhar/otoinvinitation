@@ -557,10 +557,10 @@ function renderTable() {
 
         const ts = r.created_at ? formatDate(r.created_at) : '—';
 
-        // WA sent badge
+        // WA sent badge — semua argumen di-encodeURIComponent agar aman dari kutip & spasi
         const waBadge = r.wa_sent == 1
             ? `<span class="badge-wa-sent" title="Pesan WA berhasil dikirim">✅ Terkirim</span>`
-            : `<button onclick="resendWA(${r.id},'${escHtml(r.nama)}','${r.whatsapp}','${escHtml(r.komunitas)}','${r.status}','${encodeURIComponent(r.invite_token || '')}')" 
+            : `<button onclick="resendWA(${r.id},'${encodeURIComponent(r.nama)}','${r.whatsapp}','${encodeURIComponent(r.komunitas)}','${encodeURIComponent(r.status)}','${encodeURIComponent(r.invite_token || '')}')" 
                 class="text-xs px-2 py-1 rounded border border-green-800/50 text-green-700 hover:bg-green-900/20 transition whitespace-nowrap">
                 📤 Kirim WA
               </button>`;
@@ -736,6 +736,9 @@ function showToast(title, msg, type = 'error') {
     if (!CONFIG.TURSO_TOKEN || CONFIG.TURSO_TOKEN.endsWith('...')) {
         msgs.push('⚠ <strong>TURSO_TOKEN</strong> belum diisi di js/config.js.');
     }
+    if (!CONFIG.WA_API_URL || CONFIG.WA_API_URL.includes('GANTI-INI')) {
+        msgs.push('⚠ <strong>WA_API_URL</strong> belum diisi di js/config.js. Fitur kirim WA tidak akan berfungsi.');
+    }
     if (location.protocol === 'file:') {
         msgs.push('⚠ Dibuka via <strong>file://</strong> — gunakan <strong>Live Server</strong> atau deploy ke hosting.');
     }
@@ -878,15 +881,21 @@ async function processToken(token) {
 // ================================================================
 //  RESEND WA
 // ================================================================
-async function resendWA(id, nama, whatsapp, komunitas, status, tokenEncoded) {
+async function resendWA(id, namaEnc, whatsapp, komunitasEnc, statusEnc, tokenEncoded) {
+    const nama      = decodeURIComponent(namaEnc);
+    const komunitas = decodeURIComponent(komunitasEnc);
+    const status    = decodeURIComponent(statusEnc);
+    const token     = decodeURIComponent(tokenEncoded);
+
     if (!confirm(`Kirim ulang pesan WhatsApp ke ${nama} (${whatsapp})?`)) return;
-    const token = decodeURIComponent(tokenEncoded);
-    const base  = `${location.origin}${location.pathname.replace(/\/[^/]*$/, '')}`;
-    const inviteURL = token ? `${base}/invitation.html?token=${token}` : '';
-    const msg = CONFIG.buildWAMessage(nama, komunitas, status, inviteURL);
+
+    const base      = `${location.origin}${location.pathname.replace(/\/[^/]*$/, '')}`;
+    const inviteURL = token ? `${base}/invitation.html?token=${encodeURIComponent(token)}` : '';
+    const msg = CONFIG.buildWAMessage(nama, komunitas, status, status === 'Hadir' ? inviteURL : '');
+
+    showToast('Mengirim WA...', `Mohon tunggu, mengirim ke ${whatsapp}`, 'warning');
     try {
-        const ok = await CONFIG.sendWA(whatsapp, msg);
-        if (!ok) throw new Error('WA gateway menolak request. Cek kredensial di config.js');
+        await CONFIG.sendWA(whatsapp, msg);
         await CONFIG.tursoFetch([{
             type: 'execute',
             stmt: { sql: 'UPDATE attendance SET wa_sent = 1 WHERE id = ?', args: [{type:'integer',value:String(id)}] }
@@ -894,9 +903,9 @@ async function resendWA(id, nama, whatsapp, komunitas, status, tokenEncoded) {
         const local = allData.find(r => r.id == id);
         if (local) local.wa_sent = 1;
         renderTable();
-        showToast('WA Terkirim', `Pesan berhasil dikirim ke ${nama}.`, 'success');
+        showToast('WA Terkirim ✅', `Pesan berhasil dikirim ke ${nama}.`, 'success');
     } catch (err) {
-        showToast('Gagal Kirim WA', err.message, 'error');
+        showToast('Gagal Kirim WA', err.message || 'Cek config WA_API_URL / kredensial.', 'error');
     }
 }
 
