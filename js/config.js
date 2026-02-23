@@ -8,7 +8,7 @@ const CONFIG = {
     TURSO_TOKEN: "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3NzE4MDIwOTgsImlkIjoiYzlkYzM3NjYtOTNmYi00ZDcyLWFmNzktMzg5Y2Y4NWU5Yzc5IiwicmlkIjoiZjI5YmMyYmItOTNlMS00NGFiLWI2MjMtNDEzYzQzNTRkMzRiIn0.X6kNwDtYuHH1jjSUkFvG2z4fE3Bh9e2Yb_hZvdjcDF2VyHrtQeWMW5CpvUrCxZ-0mqg398ZvQV7pchTDUlpQDA", // << PASTE FULL TOKEN DI SINI
 
     // === WA Gateway ===
-    WA_API_URL: "https://wa.fath.my.id/send/message",
+    WA_API_URL: "https://wa-proxy.GANTI-INI.workers.dev",  // << Ganti dengan URL Cloudflare Worker Anda
     WA_USER: "cecep",
     WA_PASS: "126126",
 
@@ -91,29 +91,19 @@ Salam,
     }
 };
 
-// Helper: Kirim WA via XHR + Basic Auth (withCredentials=true)
-// Menggunakan XMLHttpRequest agar withCredentials bisa diset,
-// memungkinkan browser mengirim Authorization header cross-origin.
+// Helper: Kirim WA melalui Cloudflare Worker proxy
+// Worker menangani Basic Auth server-side, sehingga tidak ada CORS issue.
 // Return: true jika HTTP 2xx, false jika gagal.
 CONFIG.sendWA = async (phone, message) => {
     try {
-        const res = await new Promise((resolve, reject) => {
-            const xhr = new XMLHttpRequest();
-            xhr.withCredentials = true;
-            xhr.addEventListener('readystatechange', function() {
-                if (this.readyState === 4) {
-                    resolve({ ok: this.status >= 200 && this.status < 300, status: this.status, body: this.responseText });
-                }
-            });
-            xhr.onerror = () => reject(new Error('Network error'));
-            xhr.open('POST', CONFIG.WA_API_URL);
-            xhr.setRequestHeader('Content-Type', 'application/json');
-            xhr.setRequestHeader('Accept', 'application/json');
-            xhr.setRequestHeader('Authorization', 'Basic ' + btoa(`${CONFIG.WA_USER}:${CONFIG.WA_PASS}`));
-            xhr.send(JSON.stringify({ phone, message }));
+        const res = await fetch(CONFIG.WA_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone, message })
         });
         if (!res.ok) {
-            console.warn(`WA HTTP ${res.status}:`, res.body);
+            const body = await res.text().catch(() => '');
+            console.warn(`WA HTTP ${res.status}:`, body);
             return false;
         }
         return true;
