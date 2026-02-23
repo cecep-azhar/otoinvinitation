@@ -21,6 +21,8 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap"
           rel="stylesheet"
         />
+        {/* Analytics */}
+        <script defer src="https://analytics.xpc.my.id/script.js" data-website-id="7d46bcb6-c364-4200-a463-dfd071086378" />
       </head>
       <body className="min-h-screen bg-[#0a0a0a] text-gray-200 font-inter antialiased flex flex-col">
         <div className="flex-1">{children}</div>
