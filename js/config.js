@@ -48,7 +48,9 @@ CONFIG.buildWAMessage = (nama, komunitas, status, inviteURL = '') => {
     const e = CONFIG.EVENT;
     if (status === "Hadir") {
         return (
-`🎉 *Halo, ${nama}!*
+`🎉 *Bismillah. Halo, ${nama}!*
+
+Aku Hana, Asisten Virtual dari BPD HIPMI OTOMOTIF JAWA BARAT.
 
 Alhamdulillah, kami dengan senang hati mengonfirmasi pendaftaran Anda! 🙏
 
