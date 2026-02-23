@@ -91,6 +91,38 @@ Salam,
     }
 };
 
+// Helper: Kirim WA via XHR + Basic Auth (withCredentials=true)
+// Menggunakan XMLHttpRequest agar withCredentials bisa diset,
+// memungkinkan browser mengirim Authorization header cross-origin.
+// Return: true jika HTTP 2xx, false jika gagal.
+CONFIG.sendWA = async (phone, message) => {
+    try {
+        const res = await new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.withCredentials = true;
+            xhr.addEventListener('readystatechange', function() {
+                if (this.readyState === 4) {
+                    resolve({ ok: this.status >= 200 && this.status < 300, status: this.status, body: this.responseText });
+                }
+            });
+            xhr.onerror = () => reject(new Error('Network error'));
+            xhr.open('POST', CONFIG.WA_API_URL);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.setRequestHeader('Accept', 'application/json');
+            xhr.setRequestHeader('Authorization', 'Basic ' + btoa(`${CONFIG.WA_USER}:${CONFIG.WA_PASS}`));
+            xhr.send(JSON.stringify({ phone, message }));
+        });
+        if (!res.ok) {
+            console.warn(`WA HTTP ${res.status}:`, res.body);
+            return false;
+        }
+        return true;
+    } catch (e) {
+        console.warn('WA send error:', e);
+        return false;
+    }
+};
+
 // Helper: Turso pipeline fetch
 CONFIG.tursoFetch = async (requests) => {
     // Guard: token belum diisi

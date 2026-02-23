@@ -885,16 +885,8 @@ async function resendWA(id, nama, whatsapp, komunitas, status, tokenEncoded) {
     const inviteURL = token ? `${base}/invitation.html?token=${token}` : '';
     const msg = CONFIG.buildWAMessage(nama, komunitas, status, inviteURL);
     try {
-        const res = await fetch(CONFIG.WA_API_URL, {
-            method: 'POST',
-            headers: {
-                'Authorization': 'Basic ' + btoa(`${CONFIG.WA_USER}:${CONFIG.WA_PASS}`),
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ phone: whatsapp, message: msg })
-        });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        // Update wa_sent flag
+        const ok = await CONFIG.sendWA(whatsapp, msg);
+        if (!ok) throw new Error('WA gateway menolak request. Cek kredensial di config.js');
         await CONFIG.tursoFetch([{
             type: 'execute',
             stmt: { sql: 'UPDATE attendance SET wa_sent = 1 WHERE id = ?', args: [{type:'integer',value:String(id)}] }

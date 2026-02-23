@@ -476,23 +476,10 @@
             const inviteURL = `${base}/invitation.html?token=${token}`;
 
             // 5. Kirim notifikasi WhatsApp + catat status pengiriman
-            let waSent = 0;
-            try {
-                const waRes = await fetch(CONFIG.WA_API_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': 'Basic ' + btoa(`${CONFIG.WA_USER}:${CONFIG.WA_PASS}`),
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        phone: waRaw,
-                        message: CONFIG.buildWAMessage(nama, komunitas, status, status === 'Hadir' ? inviteURL : '')
-                    })
-                });
-                if (waRes.ok) waSent = 1;
-            } catch (waErr) {
-                console.warn('WA notif gagal (non-fatal):', waErr);
-            }
+            const waSent = await CONFIG.sendWA(
+                waRaw,
+                CONFIG.buildWAMessage(nama, komunitas, status, status === 'Hadir' ? inviteURL : '')
+            );
 
             // Update wa_sent flag di DB
             if (waSent) {

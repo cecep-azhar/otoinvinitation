@@ -207,23 +207,36 @@ async function runTest(type) {
             log(`Mengirim WA ke ${d.wa}...`, 'dim');
             const inviteURL = `${location.origin}${location.pathname.replace(/\/[^/]*$/, '')}/invitation.html?token=TEST-TOKEN`;
             const msg = CONFIG.buildWAMessage(d.nama, d.komunitas, d.status, d.status === 'Hadir' ? inviteURL : '');
-            log(`Pesan (preview):`, 'dim');
+            log(`Pesan (200 char pertama):`, 'dim');
             log(msg.replace(/\n/g, ' | ').slice(0, 200) + '...', 'dim');
-            const waRes = await fetch(CONFIG.WA_API_URL, {
-                method: 'POST',
-                headers: {
-                    'Authorization': 'Basic ' + btoa(`${CONFIG.WA_USER}:${CONFIG.WA_PASS}`),
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ phone: d.wa, message: msg })
-            });
-            const waBody = await waRes.text();
-            rawEl.textContent = waBody;
-            log(`← WA HTTP ${waRes.status}: ${waBody.slice(0, 150)}`, waRes.ok ? 'ok' : 'err');
-            if (waRes.ok) {
-                log('✅ WA berhasil dikirim!', 'ok');
-            } else {
-                log(`❌ WA gagal: HTTP ${waRes.status}`, 'err');
+            log(`→ POST ${CONFIG.WA_API_URL}`, 'inf');
+            try {
+                const waBody = await new Promise((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+                    xhr.withCredentials = true;
+                    xhr.addEventListener('readystatechange', function() {
+                        if (this.readyState === 4) {
+                            resolve({ status: this.status, statusText: this.statusText, body: this.responseText });
+                        }
+                    });
+                    xhr.onerror = () => reject(new Error('Network error'));
+                    xhr.open('POST', CONFIG.WA_API_URL);
+                    xhr.setRequestHeader('Content-Type', 'application/json');
+                    xhr.setRequestHeader('Accept', 'application/json');
+                    xhr.setRequestHeader('Authorization', 'Basic ' + btoa(`${CONFIG.WA_USER}:${CONFIG.WA_PASS}`));
+                    xhr.send(JSON.stringify({ phone: d.wa, message: msg }));
+                });
+                rawEl.textContent = waBody.body;
+                const ok = waBody.status >= 200 && waBody.status < 300;
+                log(`← HTTP ${waBody.status} ${waBody.statusText}: ${waBody.body.slice(0, 200)}`, ok ? 'ok' : 'err');
+                if (ok) {
+                    log('✅ WA berhasil dikirim! Cek HP Anda.', 'ok');
+                } else {
+                    log(`❌ WA gagal HTTP ${waBody.status} — cek WA_USER/WA_PASS di config.js`, 'err');
+                }
+            } catch (e) {
+                log(`❌ Network error: ${e.message}`, 'err');
+                rawEl.textContent = e.message;
             }
         }
 
